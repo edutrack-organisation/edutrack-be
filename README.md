@@ -21,5 +21,9 @@ FAST API Backend for Edutrack.
     pip install -r requirements.txt
     ```
 
+## Starting the server
+
+`fastapi dev main.py`
+
 Note:
 When you install new packages, please do `pip freeze > requirements.txt`.
