@@ -1,2 +1,5 @@
 .venv
 *.pyc
+.postgres-data/pgdata/
+.env
+papers/
