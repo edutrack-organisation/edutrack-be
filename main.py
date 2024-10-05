@@ -1,11 +1,14 @@
 from typing import List
+import os
+import time
 
-
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 import crud, models, schemas
 from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
+import shutil
+from parse import parse_markdown_to_json
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -54,6 +57,24 @@ def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Topic already exists")
     return crud.create_topic(db=db, topic=topic)
 
+# POST endpoint that takes in a PDF file
+# NOTE: possibly clean up the file after parsing?
+@app.post("/parsePDF/")
+async def create_upload_file(file: UploadFile = File(...)):
+    temp_file_path = f"temp_{file.filename}"
+    with open(temp_file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Parse the PDF file (currently mark down for testing)
+    # parsed_json  = parsePDF(temp_file_path)
+    parsed_json = parse_markdown_to_json(temp_file_path)
+
+    # optional: clean up the file that storing the pdf
+    # os.remove(temp_file_path)
+
+    return parsed_json
+
+
 @app.get("/questions/") 
 async def get_questions():
     # Read the JSON file
@@ -62,7 +83,6 @@ async def get_questions():
         questions = json.load(file)
     
     return questions
-
 
 
 
