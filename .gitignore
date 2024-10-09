@@ -3,3 +3,6 @@
 .postgres-data/pgdata/
 .env
 papers/
+venv/
+*.md
+*.pdf

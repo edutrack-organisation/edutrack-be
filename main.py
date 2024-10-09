@@ -8,7 +8,7 @@ import crud, models, schemas
 from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
-from parse import parse_markdown_to_json
+from parse import parse_pdf
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -67,7 +67,8 @@ async def create_upload_file(file: UploadFile = File(...)):
 
     # Parse the PDF file (currently mark down for testing)
     # parsed_json  = parsePDF(temp_file_path)
-    parsed_json = parse_markdown_to_json(temp_file_path)
+    # parsed_json = parse_markdown_to_json(temp_file_path)
+    parsed_json = parse_pdf(temp_file_path)
 
     # optional: clean up the file that storing the pdf
     # os.remove(temp_file_path)

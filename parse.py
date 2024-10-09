@@ -1,21 +1,49 @@
 #NOTE: V3 function edition implementation
 
 import markdown
-from bs4 import BeautifulSoup
 import re
-
 import pathlib
 import json
 import uuid
+import nest_asyncio
+
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
 
-# TODO: to add larma parse implementation to markdown before this 
+nest_asyncio.apply()
 
-def parse_markdown_to_json(markdown_file_path):
-    # Read the Markdown file
-    with open(markdown_file_path, 'r', encoding='utf-8') as file:
-        md_text = file.read()
-    
+# Load environment variables from .env file
+load_dotenv()
+
+# bring in deps
+from llama_parse import LlamaParse
+from llama_index.core import SimpleDirectoryReader
+
+# Setting up of llama parse
+parser = LlamaParse(
+    result_type="markdown",  # "markdown" and "text" are available
+    parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question",
+    premium_mode=True,
+    # target_pages="9,10"
+)
+file_extractor = {".pdf": parser}
+
+# llama parse function
+def llama_parse_pdf_to_markdown(pdf_file_path):
+    # Convert PDF to Markdown using llama_parse
+    documents = SimpleDirectoryReader(input_files=[pdf_file_path], file_extractor=file_extractor).load_data()
+
+    # Combine the documents(pages) into a single document
+    combined_document = ""
+    for document in documents:
+        combined_document += document.get_text() + "\n"  # Add a newline for separation
+
+    return combined_document
+
+# markdown to json function
+def parse_markdown_to_json(md_text):
+
     # Convert Markdown to HTML
     html_content = markdown.markdown(md_text)
 
@@ -25,17 +53,7 @@ def parse_markdown_to_json(markdown_file_path):
     # Extract plain text from HTML
     plain_text = soup.get_text()
 
-    # Save the plain text to a file
-    text_file_path = "output.txt"
-    pathlib.Path(text_file_path).write_text(plain_text, encoding='utf-8')
-
-    print("Markdown has been converted to plain text and saved to", text_file_path)
-
-    with open(text_file_path, 'r', encoding='utf-8') as file:
-        text_content = file.read()
-
-    # Split the content into sections based on the question separator
-    sections = text_content.split('_QUESTION SEPERATOR___')
+    sections = plain_text.split('_QUESTION SEPERATOR___')
 
     # Initialize an empty list to store questions
     questions = []
@@ -58,6 +76,20 @@ def parse_markdown_to_json(markdown_file_path):
 
     # Return the JSON content as a dictionary
     return json.loads(json_content)
+
+# parse pdf function
+def parse_pdf(pdf_file_path):
+    # Convert PDF to Markdown
+    md_text = llama_parse_pdf_to_markdown(pdf_file_path)
+
+    # open the mark down file
+    # with open(pdf_file_path, 'r', encoding='utf-8') as file:
+        # md_text = file.read()
+        
+    # Convert Markdown to JSON
+    return parse_markdown_to_json(md_text)
+
+
 
 # #NOTE: V2 parsing implementation using llama parse
 
