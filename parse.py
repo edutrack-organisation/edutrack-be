@@ -64,7 +64,7 @@ def parse_markdown_to_json(md_text):
     # Process each section
     for section in sections:
         questions.append({
-            'question_uuid': str(uuid.uuid4()),
+            # 'question_uuid': str(uuid.uuid4()),
             'description': section.strip(),
             'topics': ["test topic 1, test topic 2"],
             'difficulty': 1
