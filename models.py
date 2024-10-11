@@ -1,31 +1,11 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table
-from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase
-from typing import List
+from __future__ import annotations # this is important to have at the top
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table, event
+from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, Session
+from typing import List, ForwardRef
 from database import Base
 
+
 # https://docs.sqlalchemy.org/en/20/orm/cascades.html#passive-deletes
-
-
-# class User(Base):
-#     __tablename__ = "users"
-
-#     id = Column(Integer, primary_key=True)
-#     email = Column(String, unique=True, index=True)
-#     hashed_password = Column(String)
-#     is_active = Column(Boolean, default=True)
-
-#     items = relationship("Item", back_populates="owner")
-
-
-# class Item(Base):
-#     __tablename__ = "items"
-
-#     id = Column(Integer, primary_key=True)
-#     title = Column(String, index=True)
-#     description = Column(String, index=True)
-#     owner_id = Column(Integer, ForeignKey("users.id"))
-
-#     owner = relationship("User", back_populates="items")
 
 class Base(DeclarativeBase):
     pass
@@ -40,8 +20,8 @@ paper_learning_outcome_association_table = Table(
 topic_question_association_table = Table(
     "topic_question_association_table",
     Base.metadata,
-    Column("topic_id", Integer, ForeignKey("topics.id"), primary_key=True),
-    Column("question_id", Integer, ForeignKey("questions.id"), primary_key=True),
+    Column("topic_id", Integer, ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True),
+    Column("question_id", Integer, ForeignKey("questions.id", ondelete="CASCADE"), primary_key=True),
 )
 
 class Topic(Base):
@@ -51,22 +31,21 @@ class Topic(Base):
     title = Column(String)
 
     # Many to many relationship
-    questions: Mapped[List["Question"]] = relationship(secondary=topic_question_association_table, back_populates="topics")
+    questions: Mapped[List["Question"]] = relationship(secondary=topic_question_association_table, back_populates="topics", cascade="all, delete")
 
 
-#NOTE: Important to set default values for the columns
-#TODO: We want to create schemas and models for validation as well
+#TODO: Important to set default values for the columns
 class Paper(Base):
     __tablename__ = "papers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[String] = mapped_column(String)
-    description: Mapped[String] = mapped_column(String)
-    module: Mapped[String] = mapped_column(String)
-    year: Mapped[int] = mapped_column(Integer)
-    overall_difficulty: Mapped[float] = mapped_column(Float)
+    description: Mapped[String] = mapped_column(String, nullable=True)
+    module: Mapped[String] = mapped_column(String, nullable=True)
+    year: Mapped[int] = mapped_column(Integer, nullable=True)
+    overall_difficulty: Mapped[float] = mapped_column(Float, nullable=True)
 
-    questions: Mapped[List["Question"]] = relationship(back_populates="paper")  # One to Many relationship
+    questions: Mapped[List["Question"]] = relationship(back_populates="paper", cascade="all, delete-orphan")  # One to Many relationship
     statistics: Mapped["Statistic"] = relationship(back_populates="paper") # One to One relationship
 
     # Many to many relationship
@@ -76,16 +55,19 @@ class Question(Base):
     __tablename__ = "questions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    question_number: Mapped[int] = mapped_column(Integer)
+    question_number: Mapped[int] = mapped_column(Integer, nullable=True)
     description: Mapped[String] = mapped_column(String)
-    difficulty: Mapped[int] = mapped_column(Integer)
+    difficulty: Mapped[int] = mapped_column(Integer, nullable=True)
     
-    paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id")) # Many to one relationship
+    paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE")) # Many to one relationship
     paper: Mapped["Paper"] = relationship(back_populates="questions") # Many to one relationship
 
     # Many to many relationship
-    topics: Mapped[List["Topic"]] = relationship(secondary=topic_question_association_table, back_populates="questions")
+    topics: Mapped[List["Topic"]] = relationship(secondary=topic_question_association_table, back_populates="questions", cascade="all, delete")
 
+
+
+# NOTE: This classes are not used yet, just here to prep for future use
 class Statistic(Base):
     __tablename__ = "statistics"
 
@@ -110,6 +92,10 @@ class LearningOutcome(Base):
     # Many to many relationship
     papers: Mapped[List["Paper"]] = relationship(
         secondary=paper_learning_outcome_association_table, back_populates="learning_outcomes")
+
+
+
+
 
 
 

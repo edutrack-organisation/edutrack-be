@@ -18,7 +18,7 @@ Please be careful on python dependency management.
 3. Create and activate a virtual environment using bash:
     ```sh
     python -m venv venv
-    source .venv/Scripts/activate  # On Windows Bash
+    source venv/Scripts/activate  # On Windows Bash
     ```
 4. Install pipreqs using `pip install pipreqs`.
 5. Install the dependencies:
