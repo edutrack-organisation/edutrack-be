@@ -1,6 +1,4 @@
 from typing import List
-import os
-import time
 
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
@@ -10,15 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import shutil
 from parse import parse_pdf
 
-
 models.Base.metadata.create_all(bind=engine)
-
-import json
-import pathlib
 
 app = FastAPI()
 
-# CORS ORIGIN AlLOWED -> To revisit for security concerns
+# TODO: CORS ORIGIN AlLOWED -> To revisit for security concerns
 origins = [
     "*",
 ]
@@ -40,10 +34,27 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
+# @app.get("/")
+# async def read_root():
+#     return {"Hello": "World"}
 
+# Endpoints for papers
+@app.get("/papers", response_model=List[schemas.Paper])
+async def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    papers = crud.get_papers(db, skip=skip, limit=limit)
+    return papers
+
+# Endpoint to get paper by id
+@app.get("/papers/{paper_id}", response_model=schemas.Paper)
+async def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
+    paper = crud.get_paper_by_id(db, paper_id=paper_id)
+    if paper is None:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    return paper
+
+# Endpoint to update a paper
+# @app.put("/papers/{paper_id}", response_model=schemas.Paper)
+# async def update_paper(paper_id: int, paper: schemas.PaperCreate, db: Session = Depends(get_db)):
 
 @app.get("/topics/", response_model=List[schemas.Topic]) 
 async def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -75,53 +86,47 @@ async def create_upload_file(file: UploadFile = File(...)):
 
     return parsed_json
 
+# POST endpoint that takes in the parsed JSON file and stores it in the database
+@app.post("/saveParsedPDF/")
+async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
+    title = parsed_json.get("title")
+    questions = parsed_json.get("questions", [])  
 
-@app.get("/questions/") 
-async def get_questions():
-    # Read the JSON file
-    json_file_path = pathlib.Path('questions.json')  # Replace with your JSON file path
-    with open(json_file_path, 'r', encoding='utf-8') as file:
-        questions = json.load(file)
+    existing_paper = crud.get_paper_by_title(db, title)
+    if existing_paper:
+        raise HTTPException(status_code=400, detail="Paper with this title already exists")
     
+    #TODO: try catch error handling?
+    crud.create_paper_with_associated_items(db=db, title=title, questions=questions)
+    
+    return {"message": "Paper and questions saved successfully"}
+
+# Get questions endpoint
+@app.get("/questions/", response_model=List[schemas.Question])
+async def get_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    questions = crud.get_questions(db, skip=skip, limit=limit)
     return questions
 
+# Get question by id endpoint
+@app.get("/questions/{question_id}", response_model=schemas.Question)
+async def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
+    question = crud.get_question_by_id(db, question_id=question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return question
 
+# Update question by id endpoint
+@app.put("/questions/{question_id}", response_model=schemas.Question)
+async def update_question_by_id(question_id: int, question: schemas.QuestionUpdate, db: Session = Depends(get_db)):
+    db_question = crud.update_question_by_id(db, question_id=question_id, question=question)
+    if db_question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return db_question
 
-# @app.get("/items/{item_id}")
-# async def read_item(item_id: int, q: Union[str, None] = None):
-#     return {"item_id": item_id, "q": q}
-
-
-# @app.post("/users/", response_model=schemas.User)
-# def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-#     db_user = crud.get_user_by_email(db, email=user.email)
-#     if db_user:
-#         raise HTTPException(status_code=400, detail="Email already registered")
-#     return crud.create_user(db=db, user=user)
-
-
-# @app.get("/users/", response_model=List[schemas.User])
-# def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-#     users = crud.get_users(db, skip=skip, limit=limit)
-#     return users
-
-
-# @app.get("/users/{user_id}", response_model=schemas.User)
-# def read_user(user_id: int, db: Session = Depends(get_db)):
-#     db_user = crud.get_user(db, user_id=user_id)
-#     if db_user is None:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return db_user
-
-
-# @app.post("/users/{user_id}/items/", response_model=schemas.Item)
-# def create_item_for_user(
-#     user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
-# ):
-#     return crud.create_user_item(db=db, item=item, user_id=user_id)
-
-
-# @app.get("/items/", response_model=List[schemas.Item])
-# def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-#     items = crud.get_items(db, skip=skip, limit=limit)
-#     return items
+# Delete question by id endpoint
+@app.delete("/questions/{question_id}", response_model=schemas.Question)
+async def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
+    db_question = crud.delete_question_by_id(db, question_id=question_id)
+    if db_question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return db_question
