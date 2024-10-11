@@ -1,10 +1,8 @@
 #NOTE: V3 function edition implementation
-
+# https://github.com/run-llama/llama_parse/blob/main/examples/demo_advanced.ipynb
 import markdown
 import re
-import pathlib
 import json
-import uuid
 import nest_asyncio
 
 from bs4 import BeautifulSoup
@@ -23,9 +21,10 @@ from llama_index.core import SimpleDirectoryReader
 # Setting up of llama parse
 parser = LlamaParse(
     result_type="markdown",  # "markdown" and "text" are available
-    parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question",
+    parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question.",
+    # Include the instructions of the question paper, but add ___QUESTIONSTART___ to seperate the instructions from the questions", 
     premium_mode=True,
-    # target_pages="9,10"
+    # target_pages="0"
 )
 file_extractor = {".pdf": parser}
 
@@ -53,36 +52,56 @@ def parse_markdown_to_json(md_text):
     # Extract plain text from HTML
     plain_text = soup.get_text()
 
+    # Extracting the title and semester 
+
+    # Regular expressions to match course title and semester
+    title_pattern = re.compile(r'CS\d{4}\s*[-–—]\s*[A-Za-z ]+', re.IGNORECASE)
+    semester_pattern = re.compile(r'Semester \d, \d{4}/\d{4}', re.IGNORECASE)
+
+    course_title = title_pattern.search(plain_text)
+    semester = semester_pattern.search(plain_text)
+
+    # Extract the matched text or set to empty string if not found
+    course_title = course_title.group(0) if course_title else "<Course Title>"
+    semester = semester.group(0) if semester else "<Semester>"
+    title = f"{course_title} - {semester}"
+
+    # Extracting the questions
+    #NOTE: need to double check this, seems to be different from markdown
     sections = plain_text.split('_QUESTION SEPERATOR___')
 
     # Initialize an empty list to store questions
     questions = []
 
     # Regular expression to match question number and content
-    question_pattern = re.compile(r'\[(\d+ marks?)\](.*?)(?=\[|\Z)', re.DOTALL)
+    # question_pattern = re.compile(r'\[(\d+ marks?)\](.*?)(?=\[|\Z)', re.DOTALL)
 
     # Process each section
     for section in sections:
         questions.append({
             # 'question_uuid': str(uuid.uuid4()),
             'description': section.strip(),
-            'topics': ["test topic 1, test topic 2"],
+            'topics': ["test topic 1", "test topic 2"],
             'difficulty': 1
         })
         
-
+    parsed_paper = {
+        'title': title,
+        'questions': questions
+    }
+    
     # Convert the list of questions to JSON
-    json_content = json.dumps(questions, indent=2, ensure_ascii=False)
+    json_parsed_paper = json.dumps(parsed_paper, indent=2, ensure_ascii=False)
 
     # Return the JSON content as a dictionary
-    return json.loads(json_content)
+    return json.loads(json_parsed_paper)
 
 # parse pdf function
 def parse_pdf(pdf_file_path):
     # Convert PDF to Markdown
     md_text = llama_parse_pdf_to_markdown(pdf_file_path)
 
-    # open the mark down file
+    # open the mark down file, for testing beyond limits
     # with open(pdf_file_path, 'r', encoding='utf-8') as file:
         # md_text = file.read()
         
