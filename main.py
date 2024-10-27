@@ -1,4 +1,5 @@
 from typing import List
+import os
 
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
@@ -7,8 +8,6 @@ from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 from parse import parse_pdf
-
-models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -25,7 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -33,10 +31,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# @app.get("/")
-# async def read_root():
-#     return {"Hello": "World"}
 
 # Endpoints for papers
 @app.get("/papers", response_model=List[schemas.Paper])
@@ -82,7 +76,7 @@ async def create_upload_file(file: UploadFile = File(...)):
     parsed_json = parse_pdf(temp_file_path)
 
     # optional: clean up the file that storing the pdf
-    # os.remove(temp_file_path)
+    os.remove(temp_file_path)
 
     return parsed_json
 

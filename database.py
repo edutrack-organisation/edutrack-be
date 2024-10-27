@@ -15,18 +15,11 @@ POSTGRES_DB = os.getenv("POSTGRES_DB")
 # SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
 SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@localhost:5432/{POSTGRES_DB}"
 
-
-# TODO: change to alemic migration
-# Drop all tables
-# drop all table and recreate them
-
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-print("Dropping table")
-Base.metadata.drop_all(bind=engine)
 
 
 
