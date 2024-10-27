@@ -31,4 +31,4 @@ Please be careful on python dependency management.
 `uvicorn main:app --reload`
 
 Note:
-When you install new packages, please do `pipreqs <location where u want to save>`.
+When you install new packages, please do `pipreqs <location where u want to save>` if you using the new packages as import. Else, please manually add it to `requirements.txt`.
