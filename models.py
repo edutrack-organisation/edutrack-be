@@ -1,9 +1,13 @@
+'''
+This models.py file contains the models for the database tables.
+It defines the structure of the tables and the relationships between them.
+'''
+
 from __future__ import annotations # this is important to have at the top
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table, event
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, Session
 from typing import List, ForwardRef
 from database import Base
-
 
 # https://docs.sqlalchemy.org/en/20/orm/cascades.html#passive-deletes
 
@@ -65,8 +69,6 @@ class Question(Base):
     # Many to many relationship
     topics: Mapped[List["Topic"]] = relationship(secondary=topic_question_association_table, back_populates="questions", cascade="all, delete")
 
-
-
 # NOTE: This classes are not used yet, just here to prep for future use
 class Statistic(Base):
     __tablename__ = "statistics"
@@ -94,14 +96,7 @@ class LearningOutcome(Base):
         secondary=paper_learning_outcome_association_table, back_populates="learning_outcomes")
 
 
-
-
-
-
-
-
-
-# NON ANNOTATED VERSION
+# NON ANNOTATED VERSION (Old version, Harder to set FKs and relationships)
 
 # from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, UniqueConstraint
 # from sqlalchemy.orm import relationship

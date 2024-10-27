@@ -1,3 +1,17 @@
+"""
+This parse.py file contains the code for parsing PDF files and converting them to structured data formats like Markdown and JSON.
+When the FastAPI application's parsePDF endpoint receives a PDF file from the frontend, it uses the `parse_pdf` function to extract the content and convert it to a JSON format.
+The parsed JSON data can then be send back to the frontend. 
+
+Flow of the parsing process:
+1. Receive PDF from endpoint.
+2. Parse the PDF file to Markdown format using the `llama_parse_pdf_to_markdown` function.
+3. Convert the Markdown content to JSON format using the `parse_markdown_to_json` function.
+4. Return the JSON data to the frontend.
+
+We make use of LlamaParse, a document parsing platform that leverages Large Language Models (LLMs) to extract structured data from documents like PDFs. This is giving us the best parsing performance and accuracy. (so far).
+"""
+
 #NOTE: V3 function edition implementation
 # https://github.com/run-llama/llama_parse/blob/main/examples/demo_advanced.ipynb
 import markdown
@@ -8,7 +22,6 @@ import nest_asyncio
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-
 nest_asyncio.apply()
 
 # Load environment variables from .env file
@@ -18,17 +31,17 @@ load_dotenv()
 from llama_parse import LlamaParse
 from llama_index.core import SimpleDirectoryReader
 
-# Setting up of llama parse
+# Setting up of LlamaParse
 parser = LlamaParse(
     result_type="markdown",  # "markdown" and "text" are available
+    # Prompt engineering: provide a prompt to help the Llama Parse model understand the task and help it generate better results
     parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question.",
-    # Include the instructions of the question paper, but add ___QUESTIONSTART___ to seperate the instructions from the questions", 
     premium_mode=True,
-    # target_pages="0"
+    # target_pages="0"   # Optional: specify the page number to parse
 )
 file_extractor = {".pdf": parser}
 
-# llama parse function
+# LlamaParse function
 def llama_parse_pdf_to_markdown(pdf_file_path):
     # Convert PDF to Markdown using llama_parse
     documents = SimpleDirectoryReader(input_files=[pdf_file_path], file_extractor=file_extractor).load_data()
@@ -42,7 +55,6 @@ def llama_parse_pdf_to_markdown(pdf_file_path):
 
 # markdown to json function
 def parse_markdown_to_json(md_text):
-
     # Convert Markdown to HTML
     html_content = markdown.markdown(md_text)
 
@@ -52,8 +64,7 @@ def parse_markdown_to_json(md_text):
     # Extract plain text from HTML
     plain_text = soup.get_text()
 
-    # Extracting the title and semester 
-
+    # Extracting the title and semester (#TODO: not made use yet)
     # Regular expressions to match course title and semester
     title_pattern = re.compile(r'CS\d{4}\s*[-–—]\s*[A-Za-z ]+', re.IGNORECASE)
     semester_pattern = re.compile(r'Semester \d, \d{4}/\d{4}', re.IGNORECASE)
@@ -79,7 +90,6 @@ def parse_markdown_to_json(md_text):
     # Process each section
     for section in sections:
         questions.append({
-            # 'question_uuid': str(uuid.uuid4()),
             'description': section.strip(),
             'topics': ["test topic 1", "test topic 2"],
             'difficulty': 1

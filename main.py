@@ -63,7 +63,6 @@ def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
     return crud.create_topic(db=db, topic=topic)
 
 # POST endpoint that takes in a PDF file
-# NOTE: possibly clean up the file after parsing?
 @app.post("/parsePDF/")
 async def create_upload_file(file: UploadFile = File(...)):
     temp_file_path = f"temp_{file.filename}"
