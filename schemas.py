@@ -1,12 +1,23 @@
-from __future__ import annotations
-from typing import List, Optional
+"""
+Schemas.py is used to define the Pydantic models for the database models.
+Pydantic models are used for data validation and serialization. They ensure that the data being sent to and received from the API conforms to the expected structure.
 
-from pydantic import BaseModel
+This file serves several purposes:
+1. **Data Validation**: Pydantic models validate the data to ensure it meets the required types and constraints before it is processed by the application.
+2. **Data Serialization**: Pydantic models can convert data between different formats, such as converting database models to JSON for API responses.
+3. **API Integration**: When using frameworks like FastAPI, Pydantic models are used to define the request and response schemas for API endpoints.
+4. **Type Safety**: Pydantic models provide type hints and autocompletion in IDEs, making the code more readable and easier to maintain.
+
+Below are the Pydantic models corresponding to the SQLAlchemy models defined in models.py.
+These models are used to validate and serialize data for the Topic and Question entities.
 
 # Circular reference issue
 # https://stackoverflow.com/questions/76724501/fastapi-many-to-many-relationship-multiple-models-and-schemas-circular-depende
-# Create a Pydantic Model for the database Model above
+"""
 
+from __future__ import annotations
+from typing import List, Optional
+from pydantic import BaseModel
 
 # Schemas for Topic
 class Topic(BaseModel):
@@ -47,7 +58,6 @@ class Question(BaseModel):
     class Config:
         orm_mode = True
 
-
 # Schemas for Paper
 #NOTE: by right should have all these validation enforced when returning from API, but comment out for now
 class Paper(BaseModel):
@@ -73,8 +83,6 @@ class PaperCreate(BaseModel):
     questions: List[Question] = []
     statistics: Optional[Statistic] = None # can be none, input comes later
     learning_outcomes: List[LearningOutcome] = [] # can be empty, input comes later
-
-
 
 # NOTE: These schemas are not used for now, just here to prep for future use
 class Statistic(BaseModel):

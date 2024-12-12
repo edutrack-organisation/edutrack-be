@@ -31,4 +31,8 @@ Please be careful on python dependency management.
 `uvicorn main:app --reload`
 
 Note:
-When you install new packages, please do `pipreqs <location where u want to save>` if you using the new packages as import. Else, please manually add it to `requirements.txt`.
+When you install new packages, please do `pipreqs <location where u want to save>`, if you using the new packages as import. This command will automatically add it to `requirements.txt` as a dependency.
+
+Else, please manually add it to `requirements.txt`.
+
+-   I am not using pip freeze because it will include all the **nested dependencies** into `requirements.txt` and this can cause many issues in the parsing library.

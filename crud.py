@@ -1,5 +1,9 @@
-from sqlalchemy.orm import Session
+"""
+This module provides CRUD (Create, Read, Update, Delete) operations for the EduTrack application.
+It includes functions to manage papers, questions, and topics within the database using SQLAlchemy ORM.
+"""
 
+from sqlalchemy.orm import Session
 import models, schemas
 
 # CRUD operations for paper
