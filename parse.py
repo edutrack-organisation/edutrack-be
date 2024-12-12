@@ -35,7 +35,7 @@ from llama_index.core import SimpleDirectoryReader
 parser = LlamaParse(
     result_type="markdown",  # "markdown" and "text" are available
     # Prompt engineering: provide a prompt to help the Llama Parse model understand the task and help it generate better results
-    parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question.",
+    parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question. For each page, add ____QUESTION SEPERATOR______ to the bottom of the page. Do not provide answers to the questions, just parse the document with no extra content added. Do not provide filler words such as Here are the questions parsed from the document, separated as requested:",
     premium_mode=True,
     # target_pages="0"   # Optional: specify the page number to parse
 )
