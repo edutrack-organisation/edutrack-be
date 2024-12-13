@@ -4,68 +4,16 @@ import pypdfium2 as pdfium
 from openai import OpenAI
 import json
 import os
-from dotenv import load_dotenv
+from constants import open_ai_pdf_parsing_prompt
 
-# Load environment variables from .env file
-load_dotenv()
-OPEN_AI_API = os.getenv("OPEN_AI_KEY")
-client = OpenAI(api_key=OPEN_AI_API)
+OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
+client = OpenAI(api_key=OPEN_AI_API_KEY)
 
 def parse_page_with_gpt(base64_images: str) -> str:
     messages=[
         {
             "role": "system",
-            "content": """You are a system to extract questions and it's options.
-            Please only extract the information given in the document.
-            Do not answer with any additional explanations or text.
-            Do not provide a summary of the questions asked.
-            You should just parse the questions and its options and display them. 
-            Please do not reference graphical elements or visualization in your answer. Just answer with the extracted text.
-            Make sure that text at the end of the page as well as text at the beginning of the page are also at the end and beginning of your extraction - as this might be continuations of the previous and next page.
-            If the page is the instruction of the paper, please extract the paper title such as exam name, course code, and year and ignore the rest.
-
-            The questions and options should be together in a field called description and should be able to render properly as text (string) in the frontend. 
-
-            Do this entirely. (This include MCQ and non MCQ/structured questions)
-
-            Extract the following information from the provided text (extracted from a PDF question paper) and format it as JSON:
-
-            You are tasked with extracting information from a text and formatting it as a JSON object.
-
-            Requirements:
-            1. Extract the title of the paper and insert it as the "title" field in the JSON.
-            2. Extract all the questions from the text. Each question should:
-            - Be stored as an object in the "questions" array.
-            - Have a "description" field containing the full question text (including options if applicable). Each options should be presented on a new line (see below)
-            
-            <Question>
-            <Option A>
-            <Option B>
-            <Option C>
-            <Option D>
-            and so on. 
-            
-            - Have a "topics" field set to ["test topic 1", "test topic 2"] (placeholder values for now).
-            - Have a "difficulty" field set to 1 (placeholder value for now).
-
-            Important:
-            - Return the output as a valid JSON object, not as a code snippet.
-            - Ensure the JSON object is well-formed and can be directly parsed by a JSON parser.
-            - The invalid escape sequence in the JSON should be escaped properly.
-            - All strings should be enclosed in double quotes.
-
-            Output Format:
-            {
-                "title": "Extracted title from the paper",
-                "questions": [
-                    {
-                        "description": "Full question text with options if applicable",
-                        "topics": ["test topic 1", "test topic 2"],
-                        "difficulty": 1
-                    }
-                ]
-            }
-        """
+            "content": open_ai_pdf_parsing_prompt
         }]
     
     for base64_image in base64_images:
@@ -92,26 +40,37 @@ def parse_page_with_gpt(base64_images: str) -> str:
     return response.choices[0].message.content or ""
 
 
+'''
+General flow: For each page of PDF, convert to images and use GPT-4o to parse the images
+Reason: OpenAI API does not handle .pdf files as the UI does. You need to convert the PDF to TXT (if numerical) or PDF to PNG (if image) first. Source: https://community.n8n.io/t/extract-parse-analyse-pdf-using-openai-chatgpt-vision-api/57360/6
+'''
+def parse_PDF_OpenAI(pdf_file_path):
+    try:
+        print("Parsing PDF with OpenAI GPT-4o")  # logging
+        pdf = pdfium.PdfDocument(pdf_file_path)
+        images = []
 
-def open_AI_parse(pdf_file_path):
-    pdf = pdfium.PdfDocument(pdf_file_path)
-    images = []
-    for i in range(len(pdf)):
-        page = pdf[i]
-        image = page.render(scale=4).to_pil()
-        buffered = BytesIO()
-        image.save(buffered, format="JPEG")
-        img_byte = buffered.getvalue()
-        img_base64 = base64.b64encode(img_byte).decode("utf-8")
-        images.append(img_base64)
+        print("Converting PDF to images")  # logging
+        for i in range(len(pdf)):
+            page = pdf[i]   # Retrieves the i-th page from the PDF document.
+            image = page.render(scale=4).to_pil()  # Renders the page into an image, scaling it by a factor of 4 and Converts the rendered image into a PIL image object.
+            buffered = BytesIO() # This line creates an in-memory byte buffer using BytesIO. This buffer will be used to temporarily store the image data in memory.
+            image.save(buffered, format="JPEG")  # This line saves the PIL image object to the in-memory byte buffer in JPEG format. The buffered object now contains the binary data of the image in JPEG format.
+            img_byte = buffered.getvalue()   # Retrieves the binary data of the JPEG image from the byte buffer.
+            img_base64 = base64.b64encode(img_byte).decode("utf-8") # Encodes the binary data into a base64-encoded string.
+            images.append(img_base64) # Appends the base64-encoded string to the images list
 
-        if i == 2:
-            break
+        print("Parsing images with OpenAI GPT-4o")  # logging
 
-    text_of_pages = parse_page_with_gpt(images)
-    print(text_of_pages)
+        parsed = parse_page_with_gpt(images)
+        
+        return json.loads(parsed)
 
-    # close to pdf file
-    pdf.close()
-
-    return json.loads(text_of_pages)
+    except Exception as e:
+        print(f"Error parsing PDF: {e}")
+        print(parsed)
+        raise Exception("Error parsing PDF")
+    finally:
+        if pdf:
+            pdf.close()
+    

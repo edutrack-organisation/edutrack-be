@@ -3,12 +3,16 @@ import os
 
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
-import crud, models, schemas
+import crud, schemas
 from database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 from parse import parse_pdf
-from openai_parse import open_AI_parse
+from openai_parse import parse_PDF_OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
@@ -70,16 +74,17 @@ async def create_upload_file(file: UploadFile = File(...)):
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Parse the PDF file (currently mark down for testing)
-    # parsed_json  = parsePDF(temp_file_path)
-    # parsed_json = parse_markdown_to_json(temp_file_path)
+    # Parse the PDF file using LlamaParse
     # parsed_json = parse_pdf(temp_file_path)
-    parsed_json = open_AI_parse(temp_file_path)
 
+    # Parse the PDF file using OpenAI GPT4-o
+    try:
+        parsed_json = parse_PDF_OpenAI(temp_file_path)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Error parsing PDF")
 
-    # optional: clean up the file that storing the pdf
+    # Clean up the file that storing the pdf
     os.remove(temp_file_path)
-
 
     return parsed_json
 
