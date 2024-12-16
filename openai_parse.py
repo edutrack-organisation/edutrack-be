@@ -1,9 +1,11 @@
 from io import BytesIO
+import unicodedata
 import base64
 import pypdfium2 as pdfium
 from openai import OpenAI
 import json
 import os
+import re
 from constants import open_ai_pdf_parsing_prompt
 
 OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
@@ -40,6 +42,16 @@ def parse_page_with_gpt(base64_images: str) -> str:
     return response.choices[0].message.content or ""
 
 
+def sanitize_json(json_string):
+    print("Sanitising JSON")  # logging 
+
+    # Normalize the text to NFKD form (decomposed form) to handle special characters
+    sanitized_json_string = unicodedata.normalize('NFKD', json_string)
+    sanitized_json_string = re.sub(r'":\s*"([^"]*)"', r'": "\1"', sanitized_json_string)
+
+    return sanitized_json_string
+
+
 '''
 General flow: For each page of PDF, convert to images and use GPT-4o to parse the images
 Reason: OpenAI API does not handle .pdf files as the UI does. You need to convert the PDF to TXT (if numerical) or PDF to PNG (if image) first. Source: https://community.n8n.io/t/extract-parse-analyse-pdf-using-openai-chatgpt-vision-api/57360/6
@@ -63,12 +75,12 @@ def parse_PDF_OpenAI(pdf_file_path):
         print("Parsing images with OpenAI GPT-4o")  # logging
 
         parsed = parse_page_with_gpt(images)
-        
-        return json.loads(parsed)
+        sanitised_parsed = sanitize_json(parsed)
+        return json.loads(sanitised_parsed)
 
     except Exception as e:
         print(f"Error parsing PDF: {e}")
-        print(parsed)
+        print(sanitised_parsed)
         raise Exception("Error parsing PDF")
     finally:
         if pdf:
