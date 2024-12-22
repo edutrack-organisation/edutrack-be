@@ -104,6 +104,7 @@ def parse_markdown_to_json(md_text):
     json_parsed_paper = json.dumps(parsed_paper, indent=2, ensure_ascii=False)
 
     # Return the JSON content as a dictionary
+    print(json_parsed_paper)
     return json.loads(json_parsed_paper)
 
 # parse pdf function
