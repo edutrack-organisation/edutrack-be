@@ -5,6 +5,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 from topics_data import training_data, all_topics
+import joblib
 
 '''
 Using Pre-Trained Sentence Transformer:
@@ -49,6 +50,9 @@ base_classifier = LogisticRegression(max_iter=1000)
 multi_label_classifier = MultiOutputClassifier(base_classifier)
 multi_label_classifier.fit(X_train, y_train)   # trains the multi_label_classifier
 
+# Save the trained model
+joblib.dump(multi_label_classifier, 'multi_label_classifier.pkl')
+
 # Step 5: Predict for a New Question
 # Intepretation of predicted_probabilities
 # This array corresponds to the predicted probabilities for one of the labels (topics).
@@ -75,6 +79,34 @@ for q in transposed_labels:
 
 f1_scores = f1_score(y_test, transposed_labels, average='micro')
 
-print("Predicted Topics:", question_predictions)
+print("Training Topics Prediction Model Complete and Saved")
+# print("Predicted Topics:", question_predictions)
 print(f"F1-Score for Multi-Label Topic Classification: {f1_scores}")
+
+
+# Function to predict topics for new questions
+# TODO: Good to abstract into pipeline?
+
+def predict_topics(new_questions):
+    # Load the trained model
+    multi_label_classifier = joblib.load('multi_label_classifier.pkl')
+    
+    # Encode new questions using the same SentenceTransformer model
+    new_embeddings = model.encode(new_questions)
+    
+    # Predict probabilities
+    predicted_probabilities = multi_label_classifier.predict_proba(new_embeddings)
+    
+    # Assign topics based on threshold
+    threshold = 0.15
+    predicted_labels = [(pp[:, 1] >= threshold).astype(int) for pp in predicted_probabilities]
+    transposed_labels = np.array(predicted_labels).T
+    
+    # Get topic names for each question
+    question_predictions = []
+    for q in transposed_labels:
+        predicted_topics = [all_topics[i] for i, label in enumerate(q) if label == 1]
+        question_predictions.append(predicted_topics)
+    
+    return question_predictions
 

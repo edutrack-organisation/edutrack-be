@@ -6,3 +6,4 @@ papers/
 venv/
 *.md
 *.pdf
+*.pkl
