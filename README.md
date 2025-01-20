@@ -28,7 +28,8 @@ Please be careful on python dependency management.
 
 ## Starting the server
 
-`uvicorn main:app --reload`
+6. Make sure your .env files are populated with the necessary credentials.
+   `uvicorn main:app --reload`
 
 Note:
 When you install new packages, please do `pipreqs <location where u want to save>`, if you using the new packages as import. This command will automatically add it to `requirements.txt` as a dependency.
