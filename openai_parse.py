@@ -7,6 +7,7 @@ import json
 import os
 import re
 from constants import open_ai_pdf_parsing_prompt
+from topics import predict_topics
 
 OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
 client = OpenAI(api_key=OPEN_AI_API_KEY)
@@ -49,6 +50,9 @@ def sanitize_json(json_string):
     sanitized_json_string = unicodedata.normalize('NFKD', json_string)
     sanitized_json_string = re.sub(r'":\s*"([^"]*)"', r'": "\1"', sanitized_json_string)
 
+    # Remove invalid control characters
+    sanitized_json_string = re.sub(r'[\x00-\x1F\x7F]', '', sanitized_json_string)
+
     return sanitized_json_string
 
 
@@ -76,7 +80,24 @@ def parse_PDF_OpenAI(pdf_file_path):
 
         parsed = parse_page_with_gpt(images)
         sanitised_parsed = sanitize_json(parsed)
-        return json.loads(sanitised_parsed)
+        python_dict = json.loads(sanitised_parsed)
+
+        extracted_questions = []  # extract and combine the questions itself for topics prediction
+        for q in python_dict["questions"]:
+            extracted_questions.append(q['description'])
+        
+        # print(f"Extracted questions: {extracted_questions}")
+        # print(predict_topics(extracted_questions))
+        
+        predicted_topics = predict_topics(extracted_questions)
+
+        # iterate through the questions and add the topics
+        for index, q in enumerate(python_dict["questions"]):
+            python_dict["questions"][index]["topics"] = predicted_topics[index]
+        
+        # print("printing python dict after adding")
+        # print(python_dict)
+        return python_dict
 
     except Exception as e:
         print(f"Error parsing PDF: {e}")
