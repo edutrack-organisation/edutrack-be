@@ -15,7 +15,7 @@ Please be careful on python dependency management.
     ```
 
 2. Ensure you have python `Python 3.11.0` installed.
-3. Create and activate a virtual environment using bash:
+3. Create and activate a virtual environment using bash: Please download Git if you do not have Git Bash.
     ```sh
     python -m venv venv
     source venv/Scripts/activate  # On Windows Bash
@@ -28,8 +28,13 @@ Please be careful on python dependency management.
 
 ## Starting the server
 
-6. Make sure your .env files are populated with the necessary credentials.
-   `uvicorn main:app --reload`
+6. Make sure your .env files are populated with the necessary credentials and remember to source them.
+7. Start the server by running `uvicorn main:app --reload`
+
+## Docker Container
+
+8. Make sure you have docker desktop installed.
+9. Run the command `docker compose up -d`
 
 Note:
 When you install new packages, please do `pipreqs <location where u want to save>`, if you using the new packages as import. This command will automatically add it to `requirements.txt` as a dependency.
