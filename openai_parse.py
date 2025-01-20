@@ -50,6 +50,9 @@ def sanitize_json(json_string):
     sanitized_json_string = unicodedata.normalize('NFKD', json_string)
     sanitized_json_string = re.sub(r'":\s*"([^"]*)"', r'": "\1"', sanitized_json_string)
 
+    # Remove invalid control characters
+    sanitized_json_string = re.sub(r'[\x00-\x1F\x7F]', '', sanitized_json_string)
+
     return sanitized_json_string
 
 
