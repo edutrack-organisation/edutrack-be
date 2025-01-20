@@ -1,7 +1,6 @@
 .venv
 *.pyc
 .postgres-data/pgdata/
-.env
 papers/
 venv/
 *.md
