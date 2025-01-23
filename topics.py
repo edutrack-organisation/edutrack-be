@@ -1,10 +1,11 @@
 import numpy as np
+import pandas as pd
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
-from topics_data import training_data, all_topics
+from topics_data import all_topics
 import joblib
 
 '''
@@ -29,7 +30,20 @@ This training only updates the parameters of the downstream classifier, not the 
 ### Helper functions
 # Return an array of binary values indicating the presence of each topic in the list of all topics
 def topics_to_vector(topics, all_topics):
-    return [1 if topic in topics else 0 for topic in all_topics]
+    return [1 if topic.strip() in topics else 0 for topic in all_topics]
+
+def load_training_data(csv_file_path):
+    df = pd.read_csv(csv_file_path)
+    training_data = df.to_dict(orient='records')
+
+    # Convert topics from comma seperate strings to lists
+    for item in training_data:
+        if isinstance(item["topics"], str):
+            item["topics"] = item["topics"].split(',')
+    
+    return training_data
+
+training_data = load_training_data('training_data.csv')
 
 # Step 1: Processing Data
 # X_text is the questions for each training data
@@ -46,6 +60,9 @@ X_embedding = model.encode(X_text)
 X_train, X_test, y_train, y_test = train_test_split(X_embedding, Y, test_size=0.2, random_state=42)
 
 # Step 4: Train a Multi-Label Classifier
+
+# NOTE: You need to have the sufficient data and you need to have at least one row for each topics in all_topics for y_train
+
 base_classifier = LogisticRegression(max_iter=1000)
 multi_label_classifier = MultiOutputClassifier(base_classifier)
 multi_label_classifier.fit(X_train, y_train)   # trains the multi_label_classifier
@@ -82,6 +99,7 @@ f1_scores = f1_score(y_test, transposed_labels, average='micro')
 print("Training Topics Prediction Model Complete and Saved")
 # print("Predicted Topics:", question_predictions)
 print(f"F1-Score for Multi-Label Topic Classification: {f1_scores}")
+
 
 
 # Function to predict topics for new questions
