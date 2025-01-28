@@ -35,6 +35,7 @@ Please be careful on python dependency management.
 
 8. Make sure you have docker desktop installed.
 9. Run the command `docker compose up -d`
+10. To set up the database with the necessary tables, run the migrations by following alembic/README.
 
 Note:
 When you install new packages, please do `pipreqs <location where u want to save>`, if you using the new packages as import. This command will automatically add it to `requirements.txt` as a dependency.
