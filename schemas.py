@@ -64,12 +64,14 @@ class Paper(BaseModel):
     id: int
     title: str
     description: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
+    course_id: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
     module: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
     year: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
     overall_difficulty: Optional[float] = None #can be none, input comes later
     questions: List[Question] = []
     statistics: Optional[Statistic] = None # can be none, input comes later
     learning_outcomes: List[LearningOutcome] = [] # can be none, input comes later
+    student_scores: Optional[List[List[int]]] = [] # can be empty, input comes later
 
     class Config:
         orm_mode = True
@@ -77,12 +79,28 @@ class Paper(BaseModel):
 class PaperCreate(BaseModel):
     title: str
     description: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
+    course_id: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
     module: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
     year: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
     overall_difficulty: Optional[float] = None #can be none, input comes later
     questions: List[Question] = []
     statistics: Optional[Statistic] = None # can be none, input comes later
     learning_outcomes: List[LearningOutcome] = [] # can be empty, input comes later
+    student_scores: Optional[List[List[int]]] = [] # can be empty, input comes later
+
+# Schemas for Course
+class Course(BaseModel):
+    id: int
+    title: str
+    papers: List[Paper] = []
+
+    class Config:
+        orm_mode = True
+
+class CourseCreate(BaseModel):
+    title: str
+    papers: List[Paper] = []
+
 
 # NOTE: These schemas are not used for now, just here to prep for future use
 class Statistic(BaseModel):

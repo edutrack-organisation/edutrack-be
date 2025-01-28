@@ -4,7 +4,7 @@ It defines the structure of the tables and the relationships between them.
 '''
 
 from __future__ import annotations # this is important to have at the top
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table, event
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table, event, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, Session
 from typing import List, ForwardRef
 from database import Base
@@ -37,6 +37,14 @@ class Topic(Base):
     # Many to many relationship
     questions: Mapped[List["Question"]] = relationship(secondary=topic_question_association_table, back_populates="topics", cascade="all, delete")
 
+class Course(Base):
+    __tablename__ = "courses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[String] = mapped_column(String)
+
+    papers: Mapped[List["Paper"]] = relationship(back_populates="course", cascade="all, delete-orphan")  # One to Many relationship
+
 
 #TODO: Important to set default values for the columns
 class Paper(Base):
@@ -45,6 +53,8 @@ class Paper(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[String] = mapped_column(String)
     description: Mapped[String] = mapped_column(String, nullable=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    course: Mapped["Course"] = relationship(back_populates="papers")
     module: Mapped[String] = mapped_column(String, nullable=True)
     year: Mapped[int] = mapped_column(Integer, nullable=True)
     overall_difficulty: Mapped[float] = mapped_column(Float, nullable=True)
@@ -54,6 +64,8 @@ class Paper(Base):
 
     # Many to many relationship
     learning_outcomes: Mapped[List["LearningOutcome"]] = relationship(secondary=paper_learning_outcome_association_table, back_populates="papers")
+
+    student_scores: Mapped[List[List[int]]] = mapped_column(JSON, nullable=True)
    
 class Question(Base):
     __tablename__ = "questions"

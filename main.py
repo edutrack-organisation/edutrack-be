@@ -37,6 +37,26 @@ def get_db():
     finally:
         db.close()
 
+# Endpoints for courses
+@app.get("/courses", response_model=List[schemas.Paper])
+async def get_courses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    courses = crud.get_courses(db, skip=skip, limit=limit)
+    return courses
+
+# Endpoint to get course by id
+@app.get("/courses/{course_id}", response_model=schemas.Course)
+async def get_course_by_id(course_id: int, db: Session = Depends(get_db)):
+    course = crud.get_course_by_id(db, course_id=course_id)
+    print(course)
+    if course is None:
+        raise HTTPException(status_code=404, detail="Course not found")
+    return course
+
+@app.post("/courses", response_model=schemas.Course)
+async def create_course(parsed_json: dict, db: Session = Depends(get_db)):
+    db_course = crud.create_course(db, course_title=parsed_json.get("course_title", "Test"))
+    return db_course
+
 # Endpoints for papers
 @app.get("/papers", response_model=List[schemas.Paper])
 async def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):

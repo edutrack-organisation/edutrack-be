@@ -1,10 +1,27 @@
 """
 This module provides CRUD (Create, Read, Update, Delete) operations for the EduTrack application.
-It includes functions to manage papers, questions, and topics within the database using SQLAlchemy ORM.
+It includes functions to manage courses, papers, questions, and topics within the database using SQLAlchemy ORM.
 """
 
 from sqlalchemy.orm import Session
 import models, schemas
+
+# CRUD operations for course
+def get_courses(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Course).offset(skip).limit(limit).all()
+
+def get_course_by_id(db: Session, course_id: int):
+    return db.query(models.Course).filter(models.Course.id == course_id).first()
+
+def get_course_by_title(db: Session, course_title: str):
+    return db.query(models.Course).filter(models.Course.title == course_title).first()
+
+def create_course(db: Session, course_title: str):
+    db_course = models.Course(title=course_title)
+    db.add(db_course)
+    db.commit()
+    db.refresh(db_course)
+    return db_course
 
 # CRUD operations for paper
 def get_papers(db: Session, skip: int = 0, limit: int = 100):
