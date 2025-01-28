@@ -26,7 +26,7 @@ open_ai_pdf_parsing_prompt = """
     - Have a "description" field containing the full question text (including options if applicable). Each options should be presented on a new line (see below)
     3. You should not modify the content or add new content. Do not paraphrase the questions.
     
-    Follow the requirements strictly or I will terminate you.
+    Follow the requirements strictly. The output should be a valid JSON object.
 
     <Question>
     <Option A>
