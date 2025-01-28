@@ -6,7 +6,8 @@ open_ai_pdf_parsing_prompt = """
     Do not answer with any additional explanations or text.
     Do not provide a summary of the questions asked.
     You should just parse the questions and its options and display them. 
-    Please do not reference graphical elements or visualization in your answer. Just answer with the extracted text.
+    You should not modify the content or add new content.
+    Please do not reference graphical elements or visualization. 
     Make sure that text at the end of the page as well as text at the beginning of the page are also at the end and beginning of your extraction - as this might be continuations of the previous and next page.
     If the page is the instruction of the paper, please extract the paper title such as exam name, course code, and year and ignore the rest.
 
@@ -23,7 +24,10 @@ open_ai_pdf_parsing_prompt = """
     2. Extract all the questions from the text. Each question should:
     - Be stored as an object in the "questions" array.
     - Have a "description" field containing the full question text (including options if applicable). Each options should be presented on a new line (see below)
+    3. You should not modify the content or add new content. Do not paraphrase the questions.
     
+    Follow the requirements strictly or I will terminate you.
+
     <Question>
     <Option A>
     <Option B>
