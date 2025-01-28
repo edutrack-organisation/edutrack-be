@@ -37,6 +37,20 @@ Please be careful on python dependency management.
 9. Run the command `docker compose up -d`
 10. To set up the database with the necessary tables, run the migrations by following alembic/README.
 
+
+
+## PDF Parsing Feature and Topic Identification
+
+11. The PDF Parsing Feature and Topic Identification is linked together.
+12. Parsing of PDF -> Run Topic Identification Classification Model -> Display on frontend.
+
+**Steps needed to set up the model locally**
+
+-   You need to first run `python train_model.py` script in bash to train the model.
+
+<br>
+
+
 Note:
 When you install new packages, please do `pipreqs <location where u want to save>`, if you using the new packages as import. This command will automatically add it to `requirements.txt` as a dependency.
 
