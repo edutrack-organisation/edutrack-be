@@ -48,6 +48,7 @@ def create_paper_with_associated_items(db: Session, title: str, questions: list)
                 # create topic
                 db_topic = models.Topic(title=topic.title)
                 db.add(db_topic)
+                db.flush() # Ensure the topic is added to the session before appending, handle duplicates within same paper
             db_question.topics.append(db_topic)
         
         db.add(db_question)
