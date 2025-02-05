@@ -284,17 +284,17 @@
 # Training data v3 - Data is taken from CSV.
 
 all_topics = [
-    # "Basic Networking Concepts: Host, packet, protocol, throughput, store-and-forward, autonomous system",
-    "Basic Networking Concepts: End-to-end delay components (bandwidth, packet size, distance, propagation speed, queue size)",
-    # "Basic Networking Concepts: Logical architecture of the Internet (five protocol layers)",
-    # "Basic Networking Concepts: Physical architecture of the Internet (network of ASes)",
+    "Basic Networking Concepts: Host, packet, protocol, throughput, store-and-forward, autonomous system",   
+    "Basic Networking Concepts: End-to-end delay components (bandwidth, packet size, distance, propagation speed, queue size)", 
+    "Basic Networking Concepts: Logical architecture of the Internet (five protocol layers)",    #OK
+    # "Basic Networking Concepts: Physical architecture of the Internet (network of ASes)",  # OK
     "Application Layer: HTTP interactions (GET, head fields, persistent connection, parallel connections, stateless protocol)",
     "Application Layer: DNS services and query resolution",
     # "Application Layer: Web and Web applications",
-    # "Socket Programming: Concept of socket",
+    "Socket Programming: Concept of socket",
     "Socket Programming: Writing simple client/server programs",
     "Socket Programming: UDP and its simplicity",
-    # "Socket Programming: Reliable protocols (ACK, NAK, sequence numbers, timeout, retransmission)",
+    "Transport Layer: Reliable protocols (ACK, NAK, sequence numbers, timeout, retransmission)",
     "Transport Layer: TCP operations (sequence number, acknowledgment number, retransmission, connection setup/termination)",
     "Transport Layer: Go-Back-N and Selective Repeat protocols",
     "Transport Layer: Checksum calculation",
@@ -316,3 +316,45 @@ all_topics = [
     # "Multimedia Networking: Content Distribution Networks (CDNs)"
 ]
 
+
+# NOTE: Reviewed
+all_topics = [
+    "Basic Networking Concepts: Host, packet, protocol, throughput, store-and-forward, autonomous system",   #OK
+    "Basic Networking Concepts: Packet switching, circuit switching",      # ADDED
+    "Basic Networking Concepts: End-to-end delay components (bandwidth, packet size, distance, propagation speed, queue size)", #OK 
+    "Basic Networking Concepts: Logical architecture of the Internet (five protocol layers)",    #OK
+    "Basic Networking Concepts: Physical architecture of the Internet (network of ASes)",  # OK
+    "Application Layer: HTTP interactions (GET, head fields, persistent connection, parallel connections, stateless protocol)", #OK
+    "Application Layer: DNS services and query resolution",  #OK
+    "Application Layer: Cookies", # ADDED
+    # "Application Layer: Web and Web applications",
+    "Socket Programming: Concept of socket",   #OK
+    "Socket Programming: Writing simple client/server programs",   #OK
+    "Transport Layer: UDP and its simplicity",  #OK
+    "Transport Layer: Reliable protocols (ACK, NAK, sequence numbers, timeout, retransmission)",  #OK
+    "Transport Layer: TCP vs UDP",  # ADDED
+    "Transport Layer: TCP operations (sequence number, acknowledgment number, retransmission, connection setup/termination)",  #OK
+    "Transport Layer: Go-Back-N and Selective Repeat protocols",  #OK
+    "Transport Layer: Checksum calculation",  # OK
+    "Network Layer: IP address, subnet, subnet mask, address allocation",
+    "Network Layer: DHCP and its operation",
+    "Network Layer: Longest prefix forwarding in routers",
+    "Network Layer: Internet Protocol (IP): datagram fragmentation, IPv4 datagram format",
+    "Network Layer: NAT (purpose and operation)",
+    "Network Layer: Routing protocols (Bellman-Ford equation, Distance vector algorithm)",
+    "Network Layer: ICMP, Ping, Traceroute",  # Added
+    "Link Layer: Role and services provided by the link layer",
+    "Link Layer: Parity and CRC schemes",
+    "Link Layer: Medium access methods",
+    "Link Layer: Switches in interconnecting subnets in LAN, Switch Forwarding Table",
+    "Link Layer: Mac Address",  # ADDED
+    "Link Layer: ARP (Address Resolution Protocol)", 
+    "Link Layer: Local Area Network (LAN), Ethernet, Ethernet Standards, Ethernet Frame Structure, Ethernet Topology", # ADDED
+    "Network Security: Principles of confidentiality, authentication, message integrity",
+    "Network Security: Principles of cryptography", # ADDED
+    "Network Security: Firewall", # ADDED
+    "Multimedia Networking: Buffering and streaming multimedia",
+    "Multimedia Networking: VOIP",
+    "Multimedia Networking: DASH streaming",
+    "Multimedia Networking: Content Distribution Networks (CDNs)"
+]
