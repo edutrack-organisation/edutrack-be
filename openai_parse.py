@@ -27,7 +27,7 @@ def parse_page_with_gpt(base64_images: str) -> str:
                     {"type": "image_url", 
                         "image_url": {
                             "url": f"data:image/jpeg;base64,{base64_image}",
-                            "detail": "low"
+                            "detail": "high"
                         }
                     }
                 ],
@@ -38,6 +38,7 @@ def parse_page_with_gpt(base64_images: str) -> str:
         model="gpt-4o-2024-08-06",
         messages=messages,
         max_tokens=16384,
+        temperature=0.2,
     )
 
     return response.choices[0].message.content or ""
