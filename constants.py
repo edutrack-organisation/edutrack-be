@@ -36,7 +36,7 @@ open_ai_pdf_parsing_prompt = """
     and so on. 
     
     - Have a "topics" field set to ["test topic 1", "test topic 2"] (placeholder values for now).
-    - Have a "difficulty" field set to 1 (placeholder value for now).
+    - Have a "difficulty" field. This difficulty field should be an integer value between 1 and 5 (inclusive). The difficulty level should be determined based on the complexity of the question.
 
     Important [This has to be strictly adhered to]:
     - Return the output as a valid JSON object, not as a code snippet.
@@ -51,7 +51,7 @@ open_ai_pdf_parsing_prompt = """
             {
                 "description": "Full question text with options if applicable",
                 "topics": ["test topic 1", "test topic 2"],
-                "difficulty": 1
+                "difficulty": <difficulty level>
             }
         ]
     }
