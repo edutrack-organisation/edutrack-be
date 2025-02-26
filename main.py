@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import os
 
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
@@ -61,6 +61,14 @@ async def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_
     topics = crud.get_topics(db, skip=skip, limit=limit)
     return topics
 
+# Endpoint to get topic by id
+@app.get("/topics/{topic_id}", response_model=schemas.Topic)
+async def get_topic_by_id(topic_id: int, db: Session = Depends(get_db)):
+    topic = crud.get_topic_by_id(db, topic_id=topic_id)
+    if topic is None:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return topic
+
 @app.post("/topics/", response_model=schemas.Topic)
 def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
     db_topic = crud.get_topic_by_title(db, title=topic.title)
@@ -109,8 +117,11 @@ async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):
 
 # Get questions endpoint
 @app.get("/questions/", response_model=List[schemas.Question])
-async def get_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    questions = crud.get_questions(db, skip=skip, limit=limit)
+async def get_questions(skip: int = 0, limit: int = 100, topic_id: Optional[int] = None, db: Session = Depends(get_db)):
+    if topic_id is not None:
+        questions = crud.get_questions_with_topic(db, topic_id=topic_id, skip=skip, limit=limit)
+    else:
+        questions = crud.get_questions(db, skip=skip, limit=limit)
     return questions
 
 # Get question by id endpoint
