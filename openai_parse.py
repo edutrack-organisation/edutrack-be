@@ -1,9 +1,9 @@
 from io import BytesIO
+from pydantic import BaseModel
 import unicodedata
 import base64
 import pypdfium2 as pdfium
 from openai import OpenAI
-import json
 import os
 import re
 from constants import open_ai_pdf_parsing_prompt
@@ -11,6 +11,15 @@ from topics import predict_topics
 
 OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
 client = OpenAI(api_key=OPEN_AI_API_KEY)
+
+class ParsedQuestion(BaseModel):
+    description: str
+    topics: list[str]
+    difficulty: int
+
+class ParsedPaper(BaseModel):
+    title: str
+    questions: list[ParsedQuestion]
 
 def parse_page_with_gpt(base64_images: str) -> str:
     messages=[
@@ -27,21 +36,22 @@ def parse_page_with_gpt(base64_images: str) -> str:
                     {"type": "image_url", 
                         "image_url": {
                             "url": f"data:image/jpeg;base64,{base64_image}",
-                            "detail": "low"
+                            "detail": "high"
                         }
                     }
                 ],
             }
         )
 
-    response = client.chat.completions.create(
+    completion = client.beta.chat.completions.parse(
         model="gpt-4o-2024-08-06",
         messages=messages,
         max_tokens=16384,
+        temperature=0.2,
+        response_format=ParsedPaper,   # enforce structured format of response https://platform.openai.com/docs/guides/structured-outputs?example=structured-data
     )
 
-    return response.choices[0].message.content or ""
-
+    return completion.choices[0].message.parsed or ""
 
 def sanitize_json(json_string):
     print("Sanitising JSON")  # logging 
@@ -78,12 +88,11 @@ def parse_PDF_OpenAI(pdf_file_path):
 
         print("Parsing images with OpenAI GPT-4o")  # logging
 
-        parsed = parse_page_with_gpt(images)
-        sanitised_parsed = sanitize_json(parsed)
-        python_dict = json.loads(sanitised_parsed)
+        parsed_paper = parse_page_with_gpt(images)
+        parsed_paper_dict = parsed_paper.dict()
 
         extracted_questions = []  # extract and combine the questions itself for topics prediction
-        for q in python_dict["questions"]:
+        for q in parsed_paper_dict["questions"]:
             extracted_questions.append(q['description'])
         
         # print(f"Extracted questions: {extracted_questions}")
@@ -92,16 +101,14 @@ def parse_PDF_OpenAI(pdf_file_path):
         predicted_topics = predict_topics(extracted_questions)
 
         # iterate through the questions and add the topics
-        for index, q in enumerate(python_dict["questions"]):
-            python_dict["questions"][index]["topics"] = predicted_topics[index]
+        for index, q in enumerate(parsed_paper_dict["questions"]):
+            parsed_paper_dict["questions"][index]["topics"] = predicted_topics[index]
         
         # print("printing python dict after adding")
-        # print(python_dict)
-        return python_dict
+        return parsed_paper_dict
 
     except Exception as e:
         print(f"Error parsing PDF: {e}")
-        print(sanitised_parsed)
         raise Exception("Error parsing PDF")
     finally:
         if pdf:

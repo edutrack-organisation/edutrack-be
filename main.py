@@ -10,6 +10,7 @@ import shutil
 from parse import parse_pdf
 from openai_parse import parse_PDF_OpenAI
 from dotenv import load_dotenv
+from topics_data import all_topics
 
 # Load environment variables from .env file
 load_dotenv()
@@ -105,6 +106,9 @@ async def create_upload_file(file: UploadFile = File(...)):
     # Parse the PDF file using OpenAI GPT4-o
     try:
         parsed_json = parse_PDF_OpenAI(temp_file_path)
+        # combine with all_topics list
+        parsed_json["all_topics"] = all_topics
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail="Error parsing PDF")
 

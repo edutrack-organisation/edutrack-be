@@ -14,6 +14,7 @@ from sklearn.metrics import f1_score, recall_score, precision_score
 from sklearn.model_selection import train_test_split
 from topics_data import all_topics
 import joblib
+import re
 
 '''
 Using Pre-Trained Sentence Transformer:
@@ -41,13 +42,19 @@ def topics_to_vector(topics, all_topics):
 
 def load_training_data(csv_file_path):
     df = pd.read_excel(csv_file_path, engine='openpyxl')  # Load the training data from an Excel file
-    
+
     def split_topics(topics):
         return topics.split("; ")
 
     df["topics"] = df["topics"].apply(split_topics)   # Split topics by ;
     df = df.to_dict(orient='records')    # Convert DataFrame to a list of dictionaries
     return df
+
+def preprocess_text(text):
+    # Replace newline characters with spaces
+    # NOTE: May or may not require the line below, need experiment
+    text = text.replace('\n', '')
+    return text
 
 ### Global Variables
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -56,9 +63,11 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 def train_classifier():
     training_data = load_training_data('training_data.xlsx')
 
+    # print(training_data[0])
+
     # Step 1: Processing Data
     # X_text is the questions for each training data
-    X_text = [item["question"] for item in training_data]
+    X_text = [preprocess_text(item["question"]) for item in training_data]
     # Y is the binary vector representation of the topics for each question (2D Numpy Array)
     Y = np.array([topics_to_vector(item["topics"], all_topics) for item in training_data])
 
@@ -75,7 +84,7 @@ def train_classifier():
 
     # Step 3: Split the data into training and test sets
     # X_test and X train is the embedding of each question, where the first dimension is the question and the second dimension is the embedding
-    X_train, X_test, y_train, y_test = train_test_split(X_reduced, Y, test_size=0.1, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_reduced, Y, test_size=0.2, random_state=41)
 
     #DEBUG: debugging hash map
     hash_map = {}
@@ -95,7 +104,7 @@ def train_classifier():
     # NOTE: You need to have the sufficient data and you need to have at least one row for each topics in all_topics for y_train
 
     # base_classifier = NearestCentroid()
-    base_classifier = LogisticRegression(max_iter=1000)
+    base_classifier = LogisticRegression(max_iter=500)
 
     # base_classifier = RandomForestClassifier(n_estimators=270, random_state=42)
     multi_label_classifier = MultiOutputClassifier(base_classifier)
@@ -115,7 +124,7 @@ def train_classifier():
     predicted_probabilities = multi_label_classifier.predict_proba(X_test)
 
     # Step 6: Assign Topics Based on Threshold
-    threshold = 0.15  # Adjust this threshold as needed #TODO: need a better way to determine threshold
+    threshold = 0.1  # Adjust this threshold as needed #TODO: need a better way to determine threshold
     # for each pp, for each of it's probability, check the index 0 against threshold
     predicted_labels = [(pp[:, 1] >= threshold).astype(int) for pp in predicted_probabilities]
 
