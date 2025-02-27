@@ -35,6 +35,7 @@ class TopicCreate(BaseModel):
 class QuestionCreate(BaseModel):
     question_number: int
     description: str
+    marks: Optional[int] = 0 # Make it required in the future
     difficulty: int
     # paper_id: int
     topics_str: List[str] = []  # list of string of topics
@@ -43,6 +44,7 @@ class QuestionUpdate(BaseModel):
     id: int
     question_number: int
     description: str
+    marks: Optional[int] = 0 # Make it required in the future
     difficulty: int
     # paper_id: int
     topics_str: List[str] = []  # list of string of topics
@@ -50,7 +52,8 @@ class QuestionUpdate(BaseModel):
 class Question(BaseModel):
     id: int
     question_number: int
-    description: str 
+    description: str
+    marks: Optional[int] = 0 # Make it required in the future
     difficulty: int
     paper_id: int
     topics: List[Topic] = []  # list of string of topics
@@ -87,6 +90,11 @@ class PaperCreate(BaseModel):
     statistics: Optional[Statistic] = None # can be none, input comes later
     learning_outcomes: List[LearningOutcome] = [] # can be empty, input comes later
     student_scores: Optional[List[List[int]]] = [] # can be empty, input comes later
+
+class PaperUpdate(BaseModel):
+    id: int
+    title: Optional[str]
+    questions: List[QuestionUpdate]
 
 # Schemas for Course
 class Course(BaseModel):
