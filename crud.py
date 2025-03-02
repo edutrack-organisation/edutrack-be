@@ -63,7 +63,7 @@ def create_paper_with_associated_items(db: Session, title: str, questions: list)
 def get_topics(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Topic).offset(skip).limit(limit).all()
 
-def get_topic(db: Session, topic_id: int):
+def get_topic_by_id(db: Session, topic_id: int):
     return db.query(models.Topic).filter(models.Topic.id == topic_id).first()
 
 def get_topic_by_title(db: Session, title: str):
@@ -88,6 +88,10 @@ def upsert_topic(db: Session, topic: schemas.TopicCreate):
 # CRUD operations for questions
 def get_questions(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Question).offset(skip).limit(limit).all()
+
+def get_questions_with_topic(db: Session, topic_id: int, skip: int = 0, limit: int = 100):
+    return db.query(models.Question).filter(models.Question.topics.any(id=topic_id)).all()
+
 
 def create_question(db: Session, question: schemas.QuestionCreate):
     db_question = models.Question(

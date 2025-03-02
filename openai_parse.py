@@ -53,19 +53,6 @@ def parse_page_with_gpt(base64_images: str) -> str:
 
     return completion.choices[0].message.parsed or ""
 
-def sanitize_json(json_string):
-    print("Sanitising JSON")  # logging 
-
-    # Normalize the text to NFKD form (decomposed form) to handle special characters
-    sanitized_json_string = unicodedata.normalize('NFKD', json_string)
-    sanitized_json_string = re.sub(r'":\s*"([^"]*)"', r'": "\1"', sanitized_json_string)
-
-    # Remove invalid control characters
-    sanitized_json_string = re.sub(r'[\x00-\x1F\x7F]', '', sanitized_json_string)
-
-    return sanitized_json_string
-
-
 '''
 General flow: For each page of PDF, convert to images and use GPT-4o to parse the images
 Reason: OpenAI API does not handle .pdf files as the UI does. You need to convert the PDF to TXT (if numerical) or PDF to PNG (if image) first. Source: https://community.n8n.io/t/extract-parse-analyse-pdf-using-openai-chatgpt-vision-api/57360/6

@@ -1,58 +1,54 @@
 # declare constants for the project
 
 open_ai_pdf_parsing_prompt = """
-    You are a system to extract questions and it's options.
-    Please only extract the information given in the document.
-    Do not answer with any additional explanations or text.
-    Do not provide a summary of the questions asked.
-    You should just parse the questions and its options and display them. 
-    You should not modify the content or add new content.
-    Please do not reference graphical elements or visualization. 
-    Make sure that text at the end of the page as well as text at the beginning of the page are also at the end and beginning of your extraction - as this might be continuations of the previous and next page.
-    If the page is the instruction of the paper, please extract the paper title such as exam name, course code, and year and ignore the rest.
+    Goal
+    Extract questions and their options from a provided PDF question paper. Ensure the extracted content remains true to the original document without modification, paraphrasing, or summarization. The output should be a valid JSON object.
 
-    The questions and options should be together in a field called description and should be able to render properly as text (string) in the frontend. 
+    Return Format
+    The extracted content should be structured as follows:
+    - Title: Extract the exam title from the document and store it in the "title" field.
+    - Questions: Extract all questions and store them in an array "questions", where each question is formatted as:
+    - "description": The full question text, including options (each on a new line). You do not have to include the question number at the start of the question text, as well as the marks allocated for this question (if any).
+    - "topics": Set to ["test topic 1", "test topic 2"] (placeholder values for now).
+    - "difficulty": An integer value between 1 and 5, determined by the complexity of the question. For determining of complexity of a question, do take into account several factors. 
+        1. The question itself. 
+        2. The topic(s) that the question belongs to.
+        3. The type of questions - whether it is MCQ, MRQ or Short Answer Questions (SAQ).
+        4. The marks allocated to that question.
+        5. The bloom taxonomy (whether that particular question is a recall question, application question etc)
+    - The output must be a well-formed JSON object that can be directly parsed by a JSON parser.
 
-    Do this entirely. (This include MCQ and non MCQ/structured questions)
+    Warnings
+    Do not modify or add new content.
+    Do not provide explanations or summaries of the questions.
+    Ensure proper escaping of special characters in JSON formatting.
+    Do not reference graphical elements or visuals.
+    Maintain the correct order of content, ensuring continuity across pages.
+    Do the parsing entirely (This include MCQ and non MCQ/structured questions).
 
-    Extract the following information from the provided text (extracted from a PDF question paper) and format it as JSON:
+    Context Dump
+    This system is designed to extract both multiple-choice (MCQ) and structured questions from a provided PDF document. It ensures that text at the end and beginning of each page is preserved to avoid loss of context. Additionally, if the document contains instructions (e.g., exam guidelines), only the exam title, course code, and year should be extracted, ignoring the rest.
+"""
 
-    You are tasked with extracting information from a text and formatting it as a JSON object.
 
-    Requirements:
-    1. Extract the title of the paper and insert it as the "title" field in the JSON.
-    2. Extract all the questions from the text. Each question should:
-    - Be stored as an object in the "questions" array.
-    - Have a "description" field containing the full question text (including options if applicable). Each options should be presented on a new line (see below)
-    3. You should not modify the content or add new content. Do not paraphrase the questions.
-    
-    Follow the requirements strictly. The output should be a valid JSON object.
+open_ai_generate_question_prompt = """
+    Goal
+    Generate one single exam question for me. The output should be a valid JSON object.
+    {content_of_prompt}
 
-    <Question>
-    <Option A>
-    <Option B>
-    <Option C>
-    <Option D>
-    and so on. 
-    
-    - Have a "topics" field set to ["test topic 1", "test topic 2"] (placeholder values for now).
-    - Have a "difficulty" field. This difficulty field should be an integer value between 1 and 5 (inclusive). The difficulty level should be determined based on the complexity of the question.
+    Return Format
+    The generated question should be structured as follows:
+    - description: This is the content of the generated itself. (including options)
+    - topics: This should be the topic of the generated question. For example, Basic Networking Concepts: Host, packet, protocol, throughput, store-and-forward, autonomous system.
+    - difficulty: An integer value between 1 and 5, determined by the complexity of the question. For determining of complexity of a question, do take into account several factors. 
+        1. The question itself. 
+        2. The topic(s) that the question belongs to.
+        3. The type of questions - whether it is MCQ, MRQ or Short Answer Questions (SAQ).
+        4. The marks allocated to that question.
+        5. The bloom taxonomy (whether that particular question is a recall question, application question etc)
 
-    Important [This has to be strictly adhered to]:
-    - Return the output as a valid JSON object, not as a code snippet.
-    - Ensure the JSON object is well-formed and can be directly parsed by a JSON parser.
-    - The invalid escape sequence in the JSON should be escaped properly.
-    - All strings should be enclosed in double quotes.
-
-    Output Format:
-    {
-        "title": "Extracted title from the paper",
-        "questions": [
-            {
-                "description": "Full question text with options if applicable",
-                "topics": ["test topic 1", "test topic 2"],
-                "difficulty": <difficulty level>
-            }
-        ]
-    }
-    """
+    Warning:
+    - For the description section, Generate the response with explicit \n newlines so that I can process and render it properly in my application.
+    - Do not include the answer.
+                
+"""
