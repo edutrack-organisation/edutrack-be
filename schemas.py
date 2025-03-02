@@ -105,5 +105,8 @@ class LearningOutcome(BaseModel):
     class Config:
         orm_mode = True
 
+# class for generation of question prompt
+class GenerateQuestion(BaseModel):
+    prompt: str
 
 

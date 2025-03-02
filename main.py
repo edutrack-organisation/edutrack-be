@@ -11,6 +11,7 @@ from parse import parse_pdf
 from openai_parse import parse_PDF_OpenAI
 from dotenv import load_dotenv
 from topics_data import all_topics
+from generate_question import generate_question_from_prompt
 
 # Load environment variables from .env file
 load_dotenv()
@@ -147,3 +148,22 @@ async def delete_question_by_id(question_id: int, db: Session = Depends(get_db))
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
     return db_question
+
+# POST endpoint that takes in the prompt for generate question using chatgpt and return the generate question
+@app.post("/generate-gpt/")
+async def generate_question_using_gpt(req: schemas.GenerateQuestion):  
+    return generate_question_from_prompt(req.prompt)
+   
+@app.post("/saveParsedPDF/")
+async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
+    title = parsed_json.get("title")
+    questions = parsed_json.get("questions", [])  
+
+    existing_paper = crud.get_paper_by_title(db, title)
+    if existing_paper:
+        raise HTTPException(status_code=400, detail="Paper with this title already exists")
+    
+    #TODO: try catch error handling?
+    crud.create_paper_with_associated_items(db=db, title=title, questions=questions)
+    
+    return {"message": "Paper and questions saved successfully"}
