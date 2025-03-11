@@ -16,6 +16,7 @@ open_ai_pdf_parsing_prompt = """
         3. The type of questions - whether it is MCQ, MRQ or Short Answer Questions (SAQ).
         4. The marks allocated to that question.
         5. The bloom taxonomy (whether that particular question is a recall question, application question etc)
+    - "mark": The total marks for this question. If the description consist of multiple parts, it should be the sum of all the parts for this question.
     - The output must be a well-formed JSON object that can be directly parsed by a JSON parser.
 
     Warnings
@@ -50,5 +51,10 @@ open_ai_generate_question_prompt = """
     Warning:
     - For the description section, Generate the response with explicit \n newlines so that I can process and render it properly in my application.
     - Do not include the answer.
+
+    Context Dump:
+    If the type of question generated is MCQ, usually 1 to 2 marks are allocated to it depending on the complexity of the MCQ question.
+    If the type of question generated is MRQ, then usually it is ard 2 marks (but still depending on the complexity of the MCQ question).
+    For the type of question generated is SAQ, they are usually worth 1-3 marks, depending on complexity of the question.
                 
 """

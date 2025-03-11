@@ -16,6 +16,7 @@ class ParsedQuestion(BaseModel):
     description: str
     topics: list[str]
     difficulty: int
+    mark: int
 
 class ParsedPaper(BaseModel):
     title: str
