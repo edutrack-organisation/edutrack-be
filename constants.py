@@ -51,5 +51,10 @@ open_ai_generate_question_prompt = """
     Warning:
     - For the description section, Generate the response with explicit \n newlines so that I can process and render it properly in my application.
     - Do not include the answer.
+
+    Context Dump:
+    If the type of question generated is MCQ, usually 1 to 2 marks are allocated to it depending on the complexity of the MCQ question.
+    If the type of question generated is MRQ, then usually it is ard 2 marks (but still depending on the complexity of the MCQ question).
+    For the type of question generated is SAQ, they are usually worth 1-3 marks, depending on complexity of the question.
                 
 """

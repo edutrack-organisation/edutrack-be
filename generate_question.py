@@ -18,6 +18,7 @@ def generate_question_from_prompt(prompt):
 class GeneratedQuestion(BaseModel):
     description: str
     topics: list[str]
+    mark: int
     difficulty: int
 
 def generate_question_with_gpt(prompt: str) -> str:
