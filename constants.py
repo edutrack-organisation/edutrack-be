@@ -16,6 +16,7 @@ open_ai_pdf_parsing_prompt = """
         3. The type of questions - whether it is MCQ, MRQ or Short Answer Questions (SAQ).
         4. The marks allocated to that question.
         5. The bloom taxonomy (whether that particular question is a recall question, application question etc)
+    - "mark": The total marks for this question. If the description consist of multiple parts, it should be the sum of all the parts for this question.
     - The output must be a well-formed JSON object that can be directly parsed by a JSON parser.
 
     Warnings
