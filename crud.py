@@ -32,10 +32,11 @@ def create_paper_with_associated_items(db: Session, title: str, questions: list)
 
     # Create a new question entry
     for i, question in enumerate(questions):
-        question_create = schemas.QuestionCreate(description=question.get("description"), question_number=i + 1, difficulty=question.get("difficulty", 1), topics_str=question.get("topics", []))
+        question_create = schemas.QuestionCreate(description=question.get("description"), question_number=i + 1, mark=question.get("mark", 1),difficulty=question.get("difficulty", 1), topics_str=question.get("topics", []))
         
         db_question = models.Question(
         question_number=question_create.question_number,
+        mark=question_create.mark,
         difficulty=question_create.difficulty,
         description=question_create.description)
     
@@ -96,6 +97,7 @@ def get_questions_with_topic(db: Session, topic_id: int, skip: int = 0, limit: i
 def create_question(db: Session, question: schemas.QuestionCreate):
     db_question = models.Question(
         question_number=question.question_number,
+        mark=question.mark,
         difficulty=question.difficulty,
         description=question.description)
     

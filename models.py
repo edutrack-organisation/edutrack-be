@@ -61,6 +61,7 @@ class Question(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     question_number: Mapped[int] = mapped_column(Integer, nullable=True)
     description: Mapped[String] = mapped_column(String)
+    mark: Mapped[int] = mapped_column(Integer, nullable=True)
     difficulty: Mapped[int] = mapped_column(Integer, nullable=True)
     
     paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE")) # Many to one relationship

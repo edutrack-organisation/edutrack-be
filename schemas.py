@@ -35,22 +35,23 @@ class TopicCreate(BaseModel):
 class QuestionCreate(BaseModel):
     question_number: int
     description: str
+    mark: int
     difficulty: int
-    # paper_id: int
     topics_str: List[str] = []  # list of string of topics
     
 class QuestionUpdate(BaseModel):
     id: int
     question_number: int
     description: str
+    mark: int
     difficulty: int
-    # paper_id: int
     topics_str: List[str] = []  # list of string of topics
 
 class Question(BaseModel):
     id: int
     question_number: int
     description: str 
+    mark: int
     difficulty: int
     paper_id: int
     topics: List[Topic] = []  # list of string of topics
