@@ -89,7 +89,7 @@ async def create_upload_file(file: UploadFile = File(...)):
 
     # Parse the PDF file using OpenAI GPT4-o
     try:
-        parsed_json = parse_PDF_OpenAI(temp_file_path)
+        parsed_json = await parse_PDF_OpenAI(temp_file_path)
         # combine with all_topics list
         parsed_json["all_topics"] = all_topics
         

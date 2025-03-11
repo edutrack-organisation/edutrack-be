@@ -3,14 +3,14 @@ from pydantic import BaseModel
 import unicodedata
 import base64
 import pypdfium2 as pdfium
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 import re
 from constants import open_ai_pdf_parsing_prompt
 from topics import predict_topics
 
 OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
-client = OpenAI(api_key=OPEN_AI_API_KEY)
+client = AsyncOpenAI(api_key=OPEN_AI_API_KEY)
 
 class ParsedQuestion(BaseModel):
     description: str
@@ -22,7 +22,7 @@ class ParsedPaper(BaseModel):
     title: str
     questions: list[ParsedQuestion]
 
-def parse_page_with_gpt(base64_images: str) -> str:
+async def parse_page_with_gpt(base64_images: str) -> str:
     messages=[
         {
             "role": "system",
@@ -44,7 +44,7 @@ def parse_page_with_gpt(base64_images: str) -> str:
             }
         )
 
-    completion = client.beta.chat.completions.parse(
+    completion = await client.beta.chat.completions.parse(
         model="gpt-4o-2024-08-06",
         messages=messages,
         max_tokens=16384,
@@ -58,7 +58,7 @@ def parse_page_with_gpt(base64_images: str) -> str:
 General flow: For each page of PDF, convert to images and use GPT-4o to parse the images
 Reason: OpenAI API does not handle .pdf files as the UI does. You need to convert the PDF to TXT (if numerical) or PDF to PNG (if image) first. Source: https://community.n8n.io/t/extract-parse-analyse-pdf-using-openai-chatgpt-vision-api/57360/6
 '''
-def parse_PDF_OpenAI(pdf_file_path):
+async def parse_PDF_OpenAI(pdf_file_path):
     try:
         print("Parsing PDF with OpenAI GPT-4o")  # logging
         pdf = pdfium.PdfDocument(pdf_file_path)
@@ -76,7 +76,7 @@ def parse_PDF_OpenAI(pdf_file_path):
 
         print("Parsing images with OpenAI GPT-4o")  # logging
 
-        parsed_paper = parse_page_with_gpt(images)
+        parsed_paper = await parse_page_with_gpt(images)
         parsed_paper_dict = parsed_paper.dict()
 
         extracted_questions = []  # extract and combine the questions itself for topics prediction
