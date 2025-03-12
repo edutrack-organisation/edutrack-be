@@ -110,4 +110,12 @@ class LearningOutcome(BaseModel):
 class GenerateQuestion(BaseModel):
     prompt: str
 
+# classes for quick generation of question
+class TopicMark(BaseModel):
+    topic_id: int
+    max_allocated_marks: int 
+
+class QuickGenerateQuestions(BaseModel):
+    topics: List[TopicMark]
+
 

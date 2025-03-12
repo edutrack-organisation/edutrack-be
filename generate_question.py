@@ -2,6 +2,9 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 from constants import open_ai_generate_question_prompt
+from sqlalchemy.orm import Session
+import crud
+import random
 
 OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
 client = OpenAI(api_key=OPEN_AI_API_KEY)
@@ -36,5 +39,24 @@ def generate_question_with_gpt(prompt: str) -> str:
     )
 
     return completion.choices[0].message.parsed or ""
+
+def select_random_questions_for_topic_with_limit_marks(db: Session, topic_id: int, max_allocated_marks: int):
+    """
+    Randomly select questions for a topic until just before exceed max_allocated_marks
+    """
+    questions = crud.get_questions_with_topic(db, topic_id)
+    selected_questions = []
+    current_marks = 0
+
+    while questions and current_marks < max_allocated_marks:
+        question = random.choice(questions)
+        questions.remove(question) # remove so that we will not pick duplicates
+
+        if current_marks + question.mark <= max_allocated_marks:
+            selected_questions.append(question)
+            current_marks += question.mark
+
+    return selected_questions
+    
 
 

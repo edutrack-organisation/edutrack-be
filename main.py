@@ -11,7 +11,7 @@ from parse import parse_pdf
 from openai_parse import parse_PDF_OpenAI
 from dotenv import load_dotenv
 from topics_data import all_topics
-from generate_question import generate_question_from_prompt
+from generate_question import generate_question_from_prompt, select_random_questions_for_topic_with_limit_marks
 
 # Load environment variables from .env file
 load_dotenv()
@@ -154,6 +154,7 @@ async def delete_question_by_id(question_id: int, db: Session = Depends(get_db))
 async def generate_question_using_gpt(req: schemas.GenerateQuestion):  
     return generate_question_from_prompt(req.prompt)
    
+#TODO: to renaming endpoint to follow restful conventions
 @app.post("/saveParsedPDF/")
 async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
     title = parsed_json.get("title")
@@ -167,3 +168,22 @@ async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):
     crud.create_paper_with_associated_items(db=db, title=title, questions=questions)
     
     return {"message": "Paper and questions saved successfully"}
+
+# A post endpoint that is /quick-generate/ 
+# takes in a list of [{topic_id, max score}]
+@app.post("/quick-generate/", response_model=List[schemas.Question])
+async def quick_generate_questions(req:schemas.QuickGenerateQuestions, db: Session = Depends(get_db)):
+    # req.topics is [TopicMark(topic_id=107, max_allocated_marks=4)]
+    # for each of the topic in req.topics, i want to retrive questions belonging to that topic up to max_allocated_marks
+    questions = []
+    selected_questions_id = set() # keep track if sekected question IDs
+    for topic in req.topics:
+        topic_questions = select_random_questions_for_topic_with_limit_marks(db, topic_id=topic.topic_id, max_allocated_marks=topic.max_allocated_marks)
+
+        # only add questions that haven't been selected yet as one question can belong to multiple topics
+        for q in topic_questions:
+            if q.id not in selected_questions_id:
+                questions.append(q)
+                selected_questions_id.add(q.id)
+
+    return questions
