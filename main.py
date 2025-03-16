@@ -41,13 +41,13 @@ def get_db():
 
 # Endpoints for papers
 @app.get("/papers", response_model=List[schemas.Paper])
-async def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     papers = crud.get_papers(db, skip=skip, limit=limit)
     return papers
 
 # Endpoint to get paper by id
 @app.get("/papers/{paper_id}", response_model=schemas.Paper)
-async def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
+def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
     paper = crud.get_paper_by_id(db, paper_id=paper_id)
     if paper is None:
         raise HTTPException(status_code=404, detail="Paper not found")
@@ -58,13 +58,13 @@ async def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
 # async def update_paper(paper_id: int, paper: schemas.PaperCreate, db: Session = Depends(get_db)):
 
 @app.get("/topics/", response_model=List[schemas.Topic]) 
-async def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     topics = crud.get_topics(db, skip=skip, limit=limit)
     return topics
 
 # Endpoint to get topic by id
 @app.get("/topics/{topic_id}", response_model=schemas.Topic)
-async def get_topic_by_id(topic_id: int, db: Session = Depends(get_db)):
+def get_topic_by_id(topic_id: int, db: Session = Depends(get_db)):
     topic = crud.get_topic_by_id(db, topic_id=topic_id)
     if topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
@@ -103,7 +103,7 @@ async def create_upload_file(file: UploadFile = File(...)):
 
 # POST endpoint that takes in the parsed JSON file and stores it in the database
 @app.post("/saveParsedPDF/")
-async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
+def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
     title = parsed_json.get("title")
     questions = parsed_json.get("questions", [])  
 
@@ -118,7 +118,7 @@ async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):
 
 # Get questions endpoint
 @app.get("/questions/", response_model=List[schemas.Question])
-async def get_questions(skip: int = 0, limit: int = 100, topic_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_questions(skip: int = 0, limit: int = 100, topic_id: Optional[int] = None, db: Session = Depends(get_db)):
     if topic_id is not None:
         questions = crud.get_questions_with_topic(db, topic_id=topic_id, skip=skip, limit=limit)
     else:
@@ -127,7 +127,7 @@ async def get_questions(skip: int = 0, limit: int = 100, topic_id: Optional[int]
 
 # Get question by id endpoint
 @app.get("/questions/{question_id}", response_model=schemas.Question)
-async def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
+def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
     question = crud.get_question_by_id(db, question_id=question_id)
     if question is None:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -135,7 +135,7 @@ async def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
 
 # Update question by id endpoint
 @app.put("/questions/{question_id}", response_model=schemas.Question)
-async def update_question_by_id(question_id: int, question: schemas.QuestionUpdate, db: Session = Depends(get_db)):
+def update_question_by_id(question_id: int, question: schemas.QuestionUpdate, db: Session = Depends(get_db)):
     db_question = crud.update_question_by_id(db, question_id=question_id, question=question)
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -143,7 +143,7 @@ async def update_question_by_id(question_id: int, question: schemas.QuestionUpda
 
 # Delete question by id endpoint
 @app.delete("/questions/{question_id}", response_model=schemas.Question)
-async def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
+def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
     db_question = crud.delete_question_by_id(db, question_id=question_id)
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -151,12 +151,14 @@ async def delete_question_by_id(question_id: int, db: Session = Depends(get_db))
 
 # POST endpoint that takes in the prompt for generate question using chatgpt and return the generate question
 @app.post("/generate-gpt/")
-async def generate_question_using_gpt(req: schemas.GenerateQuestion):  
+def generate_question_using_gpt(req: schemas.GenerateQuestion):  
+    if not req.prompt:
+        raise HTTPException(status_code=400, detail="Prompt is required and should not be an empty string")
     return generate_question_from_prompt(req.prompt)
    
 #TODO: to renaming endpoint to follow restful conventions
 @app.post("/saveParsedPDF/")
-async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
+def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):   
     title = parsed_json.get("title")
     questions = parsed_json.get("questions", [])  
 
@@ -172,7 +174,7 @@ async def save_parsed_pdf(parsed_json: dict, db: Session = Depends(get_db)):
 # A post endpoint that is /quick-generate/ 
 # takes in a list of [{topic_id, max score}]
 @app.post("/quick-generate/", response_model=List[schemas.Question])
-async def quick_generate_questions(req:schemas.QuickGenerateQuestions, db: Session = Depends(get_db)):
+def quick_generate_questions(req:schemas.QuickGenerateQuestions, db: Session = Depends(get_db)):
     # req.topics is [TopicMark(topic_id=107, max_allocated_marks=4)]
     # for each of the topic in req.topics, i want to retrive questions belonging to that topic up to max_allocated_marks
     questions = []
@@ -187,3 +189,4 @@ async def quick_generate_questions(req:schemas.QuickGenerateQuestions, db: Sessi
                 selected_questions_id.add(q.id)
 
     return questions
+

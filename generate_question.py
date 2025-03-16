@@ -44,14 +44,17 @@ def select_random_questions_for_topic_with_limit_marks(db: Session, topic_id: in
     """
     Randomly select questions for a topic until just before exceed max_allocated_marks
     """
-    questions = crud.get_questions_with_topic(db, topic_id)
+    all_questions = crud.get_questions_with_topic(db, topic_id)
+    unique_questions = {q.description: q for q in all_questions}.values()
+    questions = list(unique_questions)
+
     selected_questions = []
     current_marks = 0
 
     while questions and current_marks < max_allocated_marks:
         question = random.choice(questions)
-        questions.remove(question) # remove so that we will not pick duplicates
-
+        questions.remove(question)  # Remove used question from pool
+       
         if current_marks + question.mark <= max_allocated_marks:
             selected_questions.append(question)
             current_marks += question.mark
