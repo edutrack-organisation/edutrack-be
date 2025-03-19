@@ -54,9 +54,7 @@ def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         papers = crud.get_papers(db, skip=skip, limit=limit)
         return papers
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve papers: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve papers: {str(e)}")
 
 
 # Endpoint to get paper by id
@@ -68,9 +66,7 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Paper not found")
         return paper
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve paper: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve paper: {str(e)}")
 
 
 @app.get("/topics", response_model=List[schemas.Topic])
@@ -79,9 +75,7 @@ def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         topics = crud.get_topics(db, skip=skip, limit=limit)
         return topics
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve topics: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve topics: {str(e)}")
 
 
 # Endpoint to get topic by id
@@ -93,9 +87,7 @@ def get_topic_by_id(topic_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Topic not found")
         return topic
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve topic: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve topic: {str(e)}")
 
 
 @app.post("/topics", response_model=schemas.Topic)
@@ -110,11 +102,9 @@ def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
 
 
 # POST endpoint that takes in a PDF file
-@app.post("/papers/parse")
+@app.post("/papers/parse", response_model=schemas.PaperParseResponse)
 async def parse_paper_pdf(file: UploadFile = File(...)):
-    temp_file_path = (
-        f"temp_{file.filename}"  # Temporary file path for saving the uploaded file
-    )
+    temp_file_path = f"temp_{file.filename}"  # Temporary file path for saving the uploaded file
     try:
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -147,13 +137,9 @@ def create_paper(parsed_json: dict, db: Session = Depends(get_db)):
 
         existing_paper = crud.get_paper_by_title(db, title)
         if existing_paper:
-            raise HTTPException(
-                status_code=409, detail="Paper with this title already exists"
-            )
+            raise HTTPException(status_code=409, detail="Paper with this title already exists")
 
-        result = crud.create_paper_with_associated_items(
-            db=db, title=title, questions=questions
-        )
+        result = crud.create_paper_with_associated_items(db=db, title=title, questions=questions)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create paper: {str(e)}")
@@ -169,16 +155,12 @@ def get_questions(
 ):
     try:
         if topic_id is not None:
-            questions = crud.get_questions_with_topic(
-                db, topic_id=topic_id, skip=skip, limit=limit
-            )
+            questions = crud.get_questions_with_topic(db, topic_id=topic_id, skip=skip, limit=limit)
         else:
             questions = crud.get_questions(db, skip=skip, limit=limit)
         return questions
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve questions: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve questions: {str(e)}")
 
 
 # Get question by id endpoint
@@ -190,27 +172,19 @@ def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Question not found")
         return question
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve question: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve question: {str(e)}")
 
 
 # Update question by id endpoint
 @app.put("/questions/{question_id}", response_model=schemas.Question)
-def update_question_by_id(
-    question_id: int, question: schemas.QuestionUpdate, db: Session = Depends(get_db)
-):
+def update_question_by_id(question_id: int, question: schemas.QuestionUpdate, db: Session = Depends(get_db)):
     try:
-        db_question = crud.update_question_by_id(
-            db, question_id=question_id, question=question
-        )
+        db_question = crud.update_question_by_id(db, question_id=question_id, question=question)
         if db_question is None:
             raise HTTPException(status_code=404, detail="Question not found")
         return db_question
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to update question: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to update question: {str(e)}")
 
 
 # Delete question by id endpoint
@@ -222,35 +196,27 @@ def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Question not found")
         return db_question
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete question: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete question: {str(e)}")
 
 
 # POST endpoint that takes in the prompt for generate question using chatgpt and return the generate question
-@app.post("/generate-gpt")
+@app.post("/generate-gpt", response_model=schemas.Question)
 def generate_question_using_gpt(req: schemas.GenerateQuestion):
     try:
         if not req.prompt:
             raise HTTPException(status_code=400, detail="Prompt is required")
         return generate_question_from_prompt(req.prompt)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to generate question using GPT: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to generate question using GPT: {str(e)}")
 
 
 # A post endpoint that is /quick-generate/
 # takes in a list of [{topic_id, max score}]
 @app.post("/questions/quick-generate", response_model=List[schemas.Question])
-def quick_generate_questions(
-    req: schemas.QuickGenerateQuestions, db: Session = Depends(get_db)
-):
+def quick_generate_questions(req: schemas.QuickGenerateQuestions, db: Session = Depends(get_db)):
     try:
         if not req.topics:
-            raise HTTPException(
-                status_code=400, detail="At least one topic is required"
-            )
+            raise HTTPException(status_code=400, detail="At least one topic is required")
 
         questions = []
         selected_questions_id = set()
@@ -259,9 +225,7 @@ def quick_generate_questions(
         # for each of the topic in req.topics, i want to retrive questions belonging to that topic up to max_allocated_marks
         for topic in req.topics:
             if topic.max_allocated_marks <= 0:
-                raise HTTPException(
-                    status_code=400, detail="Max allocated marks must be greater than 0"
-                )
+                raise HTTPException(status_code=400, detail="Max allocated marks must be greater than 0")
 
             topic_questions = select_random_questions_for_topic_with_limit_marks(
                 db,
@@ -276,11 +240,7 @@ def quick_generate_questions(
                     selected_questions_id.add(q.id)
 
         if not questions:
-            raise HTTPException(
-                status_code=404, detail="No questions found for the specified topics"
-            )
+            raise HTTPException(status_code=404, detail="No questions found for the specified topics")
         return questions
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to quick generate questions: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to quick generate questions: {str(e)}")
