@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel
 
+
 # Schemas for Topic
 class Topic(BaseModel):
     id: int
@@ -28,8 +29,10 @@ class Topic(BaseModel):
     class Config:
         orm_mode = True
 
+
 class TopicCreate(BaseModel):
     title: str
+
 
 # Schemas for Question
 class QuestionCreate(BaseModel):
@@ -38,7 +41,8 @@ class QuestionCreate(BaseModel):
     mark: int
     difficulty: int
     topics_str: List[str] = []  # list of string of topics
-    
+
+
 class QuestionUpdate(BaseModel):
     id: int
     question_number: int
@@ -47,10 +51,11 @@ class QuestionUpdate(BaseModel):
     difficulty: int
     topics_str: List[str] = []  # list of string of topics
 
+
 class Question(BaseModel):
     id: int
     question_number: int
-    description: str 
+    description: str
     mark: int
     difficulty: int
     paper_id: int
@@ -59,31 +64,34 @@ class Question(BaseModel):
     class Config:
         orm_mode = True
 
+
 # Schemas for Paper
-#NOTE: by right should have all these validation enforced when returning from API, but comment out for now
+# NOTE: by right should have all these validation enforced when returning from API, but comment out for now
 class Paper(BaseModel):
     id: int
     title: str
-    description: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
-    module: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
-    year: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
-    overall_difficulty: Optional[float] = None #can be none, input comes later
+    description: Optional[str] = None  # NOTE: should not be none, update frontend to parse this information
+    module: Optional[str] = None  # NOTE: should not be none, update frontend to parse this information
+    year: Optional[int] = None  # NOTE: should not be none, update frontend to parse this information
+    overall_difficulty: Optional[float] = None  # can be none, input comes later
     questions: List[Question] = []
-    statistics: Optional[Statistic] = None # can be none, input comes later
-    learning_outcomes: List[LearningOutcome] = [] # can be none, input comes later
+    statistics: Optional[Statistic] = None  # can be none, input comes later
+    learning_outcomes: List[LearningOutcome] = []  # can be none, input comes later
 
     class Config:
         orm_mode = True
 
+
 class PaperCreate(BaseModel):
     title: str
-    description: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
-    module: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
-    year: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
-    overall_difficulty: Optional[float] = None #can be none, input comes later
+    description: Optional[str] = None  # NOTE: should not be none, update frontend to parse this information
+    module: Optional[str] = None  # NOTE: should not be none, update frontend to parse this information
+    year: Optional[int] = None  # NOTE: should not be none, update frontend to parse this information
+    overall_difficulty: Optional[float] = None  # can be none, input comes later
     questions: List[Question] = []
-    statistics: Optional[Statistic] = None # can be none, input comes later
-    learning_outcomes: List[LearningOutcome] = [] # can be empty, input comes later
+    statistics: Optional[Statistic] = None  # can be none, input comes later
+    learning_outcomes: List[LearningOutcome] = []  # can be empty, input comes later
+
 
 # NOTE: These schemas are not used for now, just here to prep for future use
 class Statistic(BaseModel):
@@ -97,6 +105,7 @@ class Statistic(BaseModel):
     class Config:
         orm_mode = True
 
+
 class LearningOutcome(BaseModel):
     id: int
     title: str
@@ -106,16 +115,30 @@ class LearningOutcome(BaseModel):
     class Config:
         orm_mode = True
 
+
 # class for generation of question prompt
 class GenerateQuestion(BaseModel):
     prompt: str
 
+
 # classes for quick generation of question
 class TopicMark(BaseModel):
     topic_id: int
-    max_allocated_marks: int 
+    max_allocated_marks: int
+
 
 class QuickGenerateQuestions(BaseModel):
     topics: List[TopicMark]
 
 
+class PaperParseResponse(BaseModel):
+    title: str
+    questions: List[dict]
+    all_topics: List[str]
+
+
+class GPTGeneratedQuestion(BaseModel):
+    description: str
+    topics: list[str]
+    mark: int
+    difficulty: int
