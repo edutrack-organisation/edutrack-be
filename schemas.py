@@ -135,3 +135,10 @@ class PaperParseResponse(BaseModel):
     title: str
     questions: List[dict]
     all_topics: List[str]
+
+
+class GPTGeneratedQuestion(BaseModel):
+    description: str
+    topics: list[str]
+    mark: int
+    difficulty: int

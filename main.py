@@ -47,7 +47,12 @@ def get_db():
         db.close()
 
 
-# Endpoints for papers
+# GET /papers
+# Retrieves a list of all papers
+# Parameters:
+#   - skip: int (optional) - Number of records to skip for pagination
+#   - limit: int (optional) - Maximum number of records to return
+# Returns: List of Paper objects
 @app.get("/papers", response_model=List[schemas.Paper])
 def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -57,7 +62,11 @@ def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to retrieve papers: {str(e)}")
 
 
-# Endpoint to get paper by id
+# GET /papers/{paper_id}
+# Retrieves a specific paper by its ID
+# Parameters:
+#   - paper_id: int - The unique identifier of the paper
+# Returns: Paper object if found, 404 if not found
 @app.get("/papers/{paper_id}", response_model=schemas.Paper)
 def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
     try:
@@ -69,6 +78,12 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to retrieve paper: {str(e)}")
 
 
+# GET /topics
+# Retrieves a list of all topics
+# Parameters:
+#   - skip: int (optional) - Number of records to skip for pagination
+#   - limit: int (optional) - Maximum number of records to return
+# Returns: List of Topic objects
 @app.get("/topics", response_model=List[schemas.Topic])
 def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -78,7 +93,11 @@ def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to retrieve topics: {str(e)}")
 
 
-# Endpoint to get topic by id
+# GET /topics/{topic_id}
+# Retrieves a specific topic by its ID
+# Parameters:
+#   - topic_id: int - The unique identifier of the topic
+# Returns: Topic object if found, 404 if not found
 @app.get("/topics/{topic_id}", response_model=schemas.Topic)
 def get_topic_by_id(topic_id: int, db: Session = Depends(get_db)):
     try:
@@ -90,6 +109,12 @@ def get_topic_by_id(topic_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to retrieve topic: {str(e)}")
 
 
+# POST /topics
+# Creates a new topic
+# Parameters:
+#   - topic: TopicCreate - Topic data in request body
+# Returns: Created Topic object
+# Errors: 409 if topic already exists
 @app.post("/topics", response_model=schemas.Topic)
 def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
     try:
@@ -101,7 +126,11 @@ def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to create topic: {str(e)}")
 
 
-# POST endpoint that takes in a PDF file
+# POST /papers/parse
+# Parses a PDF file and extracts paper information
+# Parameters:
+#   - file: UploadFile - PDF file to parse
+# Returns: Parsed paper data with questions and available topics
 @app.post("/papers/parse", response_model=schemas.PaperParseResponse)
 async def parse_paper_pdf(file: UploadFile = File(...)):
     temp_file_path = f"temp_{file.filename}"  # Temporary file path for saving the uploaded file
@@ -125,7 +154,12 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
             os.remove(temp_file_path)
 
 
-# POST endpoint that takes in the parsed JSON file and stores it in the database
+# POST /papers
+# Creates a new paper with associated questions
+# Parameters:
+#   - parsed_json: dict - Paper data with questions in request body
+# Returns: Created Paper object
+# Errors: 409 if paper title already exists
 @app.post("/papers", status_code=201, response_model=schemas.Paper)
 def create_paper(parsed_json: dict, db: Session = Depends(get_db)):
     try:
@@ -145,7 +179,13 @@ def create_paper(parsed_json: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to create paper: {str(e)}")
 
 
-# Get questions endpoint
+# GET /questions
+# Retrieves a filtered list of questions
+# Parameters:
+#   - skip: int (optional) - Number of records to skip
+#   - limit: int (optional) - Maximum number of records to return
+#   - topic_id: int (optional) - Filter questions by topic
+# Returns: List of Question objects
 @app.get("/questions", response_model=List[schemas.Question])
 def get_questions(
     skip: int = 0,
@@ -163,7 +203,11 @@ def get_questions(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve questions: {str(e)}")
 
 
-# Get question by id endpoint
+# GET /questions/{question_id}
+# Retrieves a specific question by its ID
+# Parameters:
+#   - question_id: int - The unique identifier of the question
+# Returns: Question object if found, 404 if not found
 @app.get("/questions/{question_id}", response_model=schemas.Question)
 def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
     try:
@@ -175,7 +219,12 @@ def get_question_by_id(question_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to retrieve question: {str(e)}")
 
 
-# Update question by id endpoint
+# PUT /questions/{question_id}
+# Updates an existing question
+# Parameters:
+#   - question_id: int - The unique identifier of the question
+#   - question: QuestionUpdate - Updated question data
+# Returns: Updated Question object
 @app.put("/questions/{question_id}", response_model=schemas.Question)
 def update_question_by_id(question_id: int, question: schemas.QuestionUpdate, db: Session = Depends(get_db)):
     try:
@@ -187,7 +236,11 @@ def update_question_by_id(question_id: int, question: schemas.QuestionUpdate, db
         raise HTTPException(status_code=500, detail=f"Failed to update question: {str(e)}")
 
 
-# Delete question by id endpoint
+# DELETE /questions/{question_id}
+# Deletes a specific question
+# Parameters:
+#   - question_id: int - The unique identifier of the question
+# Returns: Deleted Question object
 @app.delete("/questions/{question_id}", response_model=schemas.Question)
 def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
     try:
@@ -199,8 +252,12 @@ def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to delete question: {str(e)}")
 
 
-# POST endpoint that takes in the prompt for generate question using chatgpt and return the generate question
-@app.post("/generate-gpt", response_model=schemas.Question)
+# POST /questions/generate
+# Generates a new question using GPT
+# Parameters:
+#   - req: GenerateQuestion - Prompt for question generation
+# Returns: Generated Question object
+@app.post("/generate-gpt", response_model=schemas.GPTGeneratedQuestion)
 def generate_question_using_gpt(req: schemas.GenerateQuestion):
     try:
         if not req.prompt:
@@ -210,8 +267,11 @@ def generate_question_using_gpt(req: schemas.GenerateQuestion):
         raise HTTPException(status_code=500, detail=f"Failed to generate question using GPT: {str(e)}")
 
 
-# A post endpoint that is /quick-generate/
-# takes in a list of [{topic_id, max score}]
+# POST /questions/quick-generate
+# Generates a set of questions based on topics and mark allocation
+# Parameters:
+#   - req: QuickGenerateQuestions - List of topics and their mark allocations
+# Returns: List of selected Question objects
 @app.post("/questions/quick-generate", response_model=List[schemas.Question])
 def quick_generate_questions(req: schemas.QuickGenerateQuestions, db: Session = Depends(get_db)):
     try:
