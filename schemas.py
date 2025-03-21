@@ -17,7 +17,7 @@ These models are used to validate and serialize data for the Topic and Question 
 
 from __future__ import annotations
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # Schemas for Topic
@@ -40,7 +40,7 @@ class QuestionCreate(BaseModel):
     description: str
     mark: int
     difficulty: int
-    topics_str: List[str] = []  # list of string of topics
+    topics_str: List[str]  # list of string of topics
 
 
 class QuestionUpdate(BaseModel):
@@ -84,13 +84,13 @@ class Paper(BaseModel):
 
 class PaperCreate(BaseModel):
     title: str
-    description: Optional[str] = None  # NOTE: should not be none, update frontend to parse this information
-    module: Optional[str] = None  # NOTE: should not be none, update frontend to parse this information
-    year: Optional[int] = None  # NOTE: should not be none, update frontend to parse this information
-    overall_difficulty: Optional[float] = None  # can be none, input comes later
-    questions: List[Question] = []
-    statistics: Optional[Statistic] = None  # can be none, input comes later
-    learning_outcomes: List[LearningOutcome] = []  # can be empty, input comes later
+    description: Optional[str] = None  # NOTE: Nullable for this iteration
+    module: Optional[str] = None  # NOTE: Nullable for this iteration
+    year: Optional[int] = None  # NOTE: Nullable for this iteration
+    overall_difficulty: Optional[float] = None  # NOTE: Nullable for this iteration
+    questions: List[Question]
+    statistics: Optional[Statistic] = None  # NOTE: Nullable for this iteration
+    learning_outcomes: List[LearningOutcome] = []  # NOTE: Nullable for this iteration
 
 
 # NOTE: These schemas are not used for now, just here to prep for future use
@@ -142,3 +142,15 @@ class GPTGeneratedQuestion(BaseModel):
     topics: list[str]
     mark: int
     difficulty: int
+
+
+class QuestionCreateAPI(BaseModel):
+    description: str = Field(..., min_length=1)  # Non-empty description
+    mark: int = Field(..., gt=0)  # Positive marks
+    difficulty: int = Field(..., ge=1, le=5)  # Difficulty between 1-5
+    topics: List[str] = Field(..., min_items=1)  # at least one topic
+
+
+class PaperCreateAPI(BaseModel):
+    title: str = Field(..., min_length=1)  # Non-empty title
+    questions: List[QuestionCreateAPI] = Field(..., min_items=1)  # At least one question

@@ -47,13 +47,16 @@ def create_paper_with_associated_items(db: Session, title: str, questions: List[
         for i, question in enumerate(questions):
             db_question = models.Question(
                 question_number=i + 1,
-                description=question.get("description"),
-                mark=question.get("mark", 1),
-                difficulty=question.get("difficulty", 1),
+                description=question.description,
+                mark=question.mark,
+                difficulty=question.difficulty,
             )
 
+            topics_for_question = question.topics
+            # if topics for question is [], throw error
+
             # Process topics for the question
-            for topic_title in question.get("topics", []):
+            for topic_title in question.topics:
                 db_topic = get_topic_by_title(db, topic_title)
                 if not db_topic:
                     db_topic = models.Topic(title=topic_title)
@@ -135,7 +138,9 @@ def get_questions(
 def get_questions_with_topic(db: Session, topic_id: int, skip: int = 0, limit: int = 100) -> List[models.Question]:
     """Retrieves a list of questions for a specific topic."""
     try:
-        return db.query(models.Question).filter(model.Question.topics.any(id=topic_id)).offset(skip).limit(limit).all()
+        return (
+            db.query(models.Question).filter(models.Question.topics.any(id=topic_id)).offset(skip).limit(limit).all()
+        )
     except SQLAlchemyError as e:
         raise e
 

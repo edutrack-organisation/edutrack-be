@@ -1,7 +1,9 @@
 from typing import List, Optional
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, File, UploadFile, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import crud, schemas
 from database import SessionLocal, engine, get_db
@@ -15,6 +17,7 @@ from generate_question import (
     generate_question_from_prompt,
     select_random_questions_for_topic_with_limit_marks,
 )
+from pydantic import ValidationError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -36,6 +39,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error. Please check that your input satisfy the requirement format."},
+    )
 
 
 # GET /papers
@@ -152,10 +163,10 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
 # Returns: Created Paper object
 # Errors: 409 if paper title already exists
 @app.post("/papers", status_code=201, response_model=schemas.Paper)
-def create_paper(parsed_json: dict, db: Session = Depends(get_db)):
+def create_paper(parsed_json: schemas.PaperCreateAPI, db: Session = Depends(get_db)):
     try:
-        title = parsed_json.get("title")
-        questions = parsed_json.get("questions", [])
+        title = parsed_json.title
+        questions = parsed_json.questions
 
         if not title:
             raise HTTPException(status_code=400, detail="Paper title is required")
@@ -163,7 +174,6 @@ def create_paper(parsed_json: dict, db: Session = Depends(get_db)):
         existing_paper = crud.get_paper_by_title(db, title)
         if existing_paper:
             raise HTTPException(status_code=409, detail="Paper with this title already exists")
-
         result = crud.create_paper_with_associated_items(db=db, title=title, questions=questions)
         return result
     except Exception as e:
