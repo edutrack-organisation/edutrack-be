@@ -53,7 +53,6 @@ def create_paper_with_associated_items(db: Session, title: str, questions: List[
             )
 
             topics_for_question = question.topics
-            # if topics for question is [], throw error
 
             # Process topics for the question
             for topic_title in question.topics:

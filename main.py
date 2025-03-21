@@ -163,7 +163,7 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
 # Returns: Created Paper object
 # Errors: 409 if paper title already exists
 @app.post("/papers", status_code=201, response_model=schemas.Paper)
-def create_paper(parsed_json: schemas.PaperCreateAPI, db: Session = Depends(get_db)):
+def create_paper(parsed_json: schemas.PaperCreateRequest, db: Session = Depends(get_db)):
     try:
         title = parsed_json.title
         questions = parsed_json.questions
@@ -256,10 +256,10 @@ def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
 # POST /questions/generate
 # Generates a new question using GPT
 # Parameters:
-#   - req: GenerateQuestion - Prompt for question generation
+#   - req: GenerateQuestionGPTRequest - Prompt for question generation
 # Returns: Generated Question object
-@app.post("/generate-gpt", response_model=schemas.GPTGeneratedQuestion)
-def generate_question_using_gpt(req: schemas.GenerateQuestion):
+@app.post("/generate-gpt", response_model=schemas.GenerateQuestionGPTResponse)
+def generate_question_using_gpt(req: schemas.GenerateQuestionGPTRequest):
     try:
         if not req.prompt:
             raise HTTPException(status_code=400, detail="Prompt is required")
@@ -271,10 +271,10 @@ def generate_question_using_gpt(req: schemas.GenerateQuestion):
 # POST /questions/quick-generate
 # Generates a set of questions based on topics and mark allocation
 # Parameters:
-#   - req: QuickGenerateQuestions - List of topics and their mark allocations
+#   - req: QuickGenerateQuestionsRequest - List of topics and their mark allocations
 # Returns: List of selected Question objects
 @app.post("/questions/quick-generate", response_model=List[schemas.Question])
-def quick_generate_questions(req: schemas.QuickGenerateQuestions, db: Session = Depends(get_db)):
+def quick_generate_questions(req: schemas.QuickGenerateQuestionsRequest, db: Session = Depends(get_db)):
     try:
         if not req.topics:
             raise HTTPException(status_code=400, detail="At least one topic is required")
