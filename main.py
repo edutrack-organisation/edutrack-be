@@ -121,7 +121,7 @@ def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
         db_topic = crud.get_topic_by_title(db, title=topic.title)
         if db_topic:
             raise HTTPException(status_code=409, detail="Topic already exists")
-        return crud.create_topic(db=db, topic=topic)
+        return crud.upsert_topic(db=db, topic=topic)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create topic: {str(e)}")
 
