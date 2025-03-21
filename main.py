@@ -4,7 +4,7 @@ import os
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 import crud, schemas
-from database import SessionLocal, engine
+from database import SessionLocal, engine, get_db
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 from parse import parse_pdf
@@ -36,15 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 # GET /papers

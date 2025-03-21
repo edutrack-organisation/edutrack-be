@@ -12,7 +12,7 @@ Flow of the parsing process:
 We make use of LlamaParse, a document parsing platform that leverages Large Language Models (LLMs) to extract structured data from documents like PDFs. This is giving us the best parsing performance and accuracy. (so far).
 """
 
-#NOTE: V3 function edition implementation
+# NOTE: V3 function edition implementation
 # https://github.com/run-llama/llama_parse/blob/main/examples/demo_advanced.ipynb
 import markdown
 import re
@@ -24,8 +24,6 @@ from dotenv import load_dotenv
 
 nest_asyncio.apply()
 
-# Load environment variables from .env file
-load_dotenv()
 
 # bring in deps
 from llama_parse import LlamaParse
@@ -35,11 +33,12 @@ from llama_index.core import SimpleDirectoryReader
 parser = LlamaParse(
     result_type="markdown",  # "markdown" and "text" are available
     # Prompt engineering: provide a prompt to help the Llama Parse model understand the task and help it generate better results
-    parsing_instruction = "Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question. For each page, add ____QUESTION SEPERATOR______ to the bottom of the page. Do not provide answers to the questions, just parse the document with no extra content added. Do not provide filler words such as Here are the questions parsed from the document, separated as requested:",
+    parsing_instruction="Seperate the questions with ____QUESTION SEPERATOR______, make sure subquestions such as (a), (b) to be part of the same question. For each page, add ____QUESTION SEPERATOR______ to the bottom of the page. Do not provide answers to the questions, just parse the document with no extra content added. Do not provide filler words such as Here are the questions parsed from the document, separated as requested:",
     premium_mode=True,
     # target_pages="0"   # Optional: specify the page number to parse
 )
 file_extractor = {".pdf": parser}
+
 
 # LlamaParse function
 def llama_parse_pdf_to_markdown(pdf_file_path):
@@ -53,21 +52,22 @@ def llama_parse_pdf_to_markdown(pdf_file_path):
 
     return combined_document
 
+
 # markdown to json function
 def parse_markdown_to_json(md_text):
     # Convert Markdown to HTML
     html_content = markdown.markdown(md_text)
 
     # Parse HTML content
-    soup = BeautifulSoup(html_content, 'html.parser')
+    soup = BeautifulSoup(html_content, "html.parser")
 
     # Extract plain text from HTML
     plain_text = soup.get_text()
 
     # Extracting the title and semester (#TODO: not made use yet)
     # Regular expressions to match course title and semester
-    title_pattern = re.compile(r'CS\d{4}\s*[-–—]\s*[A-Za-z ]+', re.IGNORECASE)
-    semester_pattern = re.compile(r'Semester \d, \d{4}/\d{4}', re.IGNORECASE)
+    title_pattern = re.compile(r"CS\d{4}\s*[-–—]\s*[A-Za-z ]+", re.IGNORECASE)
+    semester_pattern = re.compile(r"Semester \d, \d{4}/\d{4}", re.IGNORECASE)
 
     course_title = title_pattern.search(plain_text)
     semester = semester_pattern.search(plain_text)
@@ -78,8 +78,8 @@ def parse_markdown_to_json(md_text):
     title = f"{course_title} - {semester}"
 
     # Extracting the questions
-    #NOTE: need to double check this, seems to be different from markdown
-    sections = plain_text.split('_QUESTION SEPERATOR___')
+    # NOTE: need to double check this, seems to be different from markdown
+    sections = plain_text.split("_QUESTION SEPERATOR___")
 
     # Initialize an empty list to store questions
     questions = []
@@ -89,23 +89,17 @@ def parse_markdown_to_json(md_text):
 
     # Process each section
     for section in sections:
-        questions.append({
-            'description': section.strip(),
-            'topics': ["test topic 1", "test topic 2"],
-            'difficulty': 1
-        })
-        
-    parsed_paper = {
-        'title': title,
-        'questions': questions
-    }
-    
+        questions.append({"description": section.strip(), "topics": ["test topic 1", "test topic 2"], "difficulty": 1})
+
+    parsed_paper = {"title": title, "questions": questions}
+
     # Convert the list of questions to JSON
     json_parsed_paper = json.dumps(parsed_paper, indent=2, ensure_ascii=False)
 
     # Return the JSON content as a dictionary
     print(json_parsed_paper)
     return json.loads(json_parsed_paper)
+
 
 # parse pdf function
 def parse_pdf(pdf_file_path):
@@ -114,11 +108,10 @@ def parse_pdf(pdf_file_path):
 
     # open the mark down file, for testing beyond limits
     # with open(pdf_file_path, 'r', encoding='utf-8') as file:
-        # md_text = file.read()
-        
+    # md_text = file.read()
+
     # Convert Markdown to JSON
     return parse_markdown_to_json(md_text)
-
 
 
 # #NOTE: V2 parsing implementation using llama parse
@@ -178,7 +171,7 @@ def parse_pdf(pdf_file_path):
 #         'topics': ["test topic 1, test topic 2"],
 #         'difficulty': 1
 #     })
-    
+
 
 # # Convert the list of questions to JSON
 # json_content = json.dumps(questions, indent=2, ensure_ascii=False)
@@ -206,11 +199,6 @@ def parse_pdf(pdf_file_path):
 #     i += 1
 #     if i == 3:
 #         break
-
-
-
-
-
 
 
 # NOTE: V1 parsing implementation
@@ -248,7 +236,7 @@ def parse_pdf(pdf_file_path):
 
 # print("Markdown has been converted to plain text and saved to", text_file_path)
 
-# # #NOTE: convert from pdf to text 
+# # #NOTE: convert from pdf to text
 # # import fitz  # PyMuPDF
 # # import pathlib
 # # # Read the text file
@@ -257,13 +245,13 @@ def parse_pdf(pdf_file_path):
 # # def pdf_to_text(file_path):
 # #     # Open the PDF file
 # #     pdf_document = fitz.open(file_path)
-    
+
 # #     # Extract text from each page
 # #     text_content = ""
 # #     for page_num in range(len(pdf_document)):
 # #         page = pdf_document.load_page(page_num)
 # #         text_content += page.get_text("text") + "\n"
-    
+
 # #     return text_content
 
 # # # Example usage
@@ -322,10 +310,3 @@ def parse_pdf(pdf_file_path):
 
 
 # print("Questions have been extracted and saved to", json_file_path)
-
-
-
-
-
-
-
