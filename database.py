@@ -1,3 +1,8 @@
+"""
+Database configuration and session management for SQLAlchemy.
+Handles PostgreSQL connection, session factory creation, and dependency injection for FastAPI routes.
+"""
+
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base

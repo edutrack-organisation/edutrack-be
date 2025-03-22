@@ -1,6 +1,11 @@
+"""
+Main FastAPI application file that defines all API endpoints and their handlers.
+
+This file serves as the core of the EduTrack API, containing the endpoints and config files. 
+"""
+
 from typing import List, Optional
 import os
-
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -19,8 +24,6 @@ from generate_question import (
 )
 from pydantic import ValidationError
 
-# Load environment variables from .env file
-load_dotenv()
 
 app = FastAPI(
     title="EduTrack API",

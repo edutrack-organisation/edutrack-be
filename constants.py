@@ -1,4 +1,7 @@
-# declare constants for the project
+"""
+System-wide constants and prompt templates for OpenAI API interactions.
+Defines structured prompts for PDF parsing and question generation.
+"""
 
 open_ai_pdf_parsing_prompt = """
     Goal
