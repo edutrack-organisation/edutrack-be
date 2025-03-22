@@ -67,7 +67,7 @@ async def parse_PDF_OpenAI(pdf_file_path):
         images = []
 
         print("Converting PDF to images")  # logging
-        for i in range(4):
+        for i in range(len(pdf)):
             page = pdf[i]  # Retrieves the i-th page from the PDF document.
             image = page.render(
                 scale=4
