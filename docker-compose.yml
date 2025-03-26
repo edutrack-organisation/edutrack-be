@@ -3,7 +3,7 @@ version: "3.1"
 services:
     database:
         container_name: edutrack-db
-        image: postgres:14
+        image: pgvector/pgvector:pg14
         env_file:
             - .env
         environment:
