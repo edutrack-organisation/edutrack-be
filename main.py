@@ -262,11 +262,11 @@ def delete_question_by_id(question_id: int, db: Session = Depends(get_db)):
 #   - req: GenerateQuestionGPTRequest - Prompt for question generation
 # Returns: Generated Question object
 @app.post("/generate-gpt", response_model=schemas.GenerateQuestionGPTResponse)
-def generate_question_using_gpt(req: schemas.GenerateQuestionGPTRequest):
+def generate_question_using_gpt(req: schemas.GenerateQuestionGPTRequest, db: Session = Depends(get_db)):
     try:
         if not req.prompt:
             raise HTTPException(status_code=400, detail="Prompt is required")
-        return generate_question_from_prompt(req.prompt)
+        return generate_question_from_prompt(db, req.prompt)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate question using GPT: {str(e)}")
 

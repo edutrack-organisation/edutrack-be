@@ -8,6 +8,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 import models, schemas
 from typing import List, Optional
+from config import client  # Add this import at the top
+
+from sentence_transformers import SentenceTransformer
+
+# Initialize the model at module level
+sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 # Paper operations
@@ -45,11 +51,15 @@ def create_paper_with_associated_items(db: Session, title: str, questions: List[
 
         # Process each question
         for i, question in enumerate(questions):
+            # Generate embedding using sentence transformer
+            embedding = sentence_model.encode(question.description).tolist()
+
             db_question = models.Question(
                 question_number=i + 1,
                 description=question.description,
                 mark=question.mark,
                 difficulty=question.difficulty,
+                embedding=embedding,  # this is for similarity search for RAG
             )
 
             topics_for_question = question.topics
@@ -121,6 +131,45 @@ def upsert_topic(db: Session, topic: schemas.TopicCreate) -> models.Topic:
 
 
 # Question operations
+
+
+def get_similar_questions(
+    db: Session, embedding: list[float], limit: int = 5, similarity_threshold: float = 0.5
+) -> List[models.Question]:
+    """Retrieves questions similar to the given embedding vector.
+    db (Session): SQLAlchemy database session
+        embedding (list[float]): Vector representation of the query text (384 dimensions)
+        limit (int, optional): Maximum number of similar questions to return. Defaults to 5.
+        similarity_threshold (float, optional): Minimum cosine similarity score (0-1). Defaults to 0.5.
+            - 1.0 means exactly similar
+            - 0.0 means completely different
+            - 0.5 means moderately similar
+
+    Returns:
+        List[models.Question]: List of Question objects ordered by similarity (most similar first)
+
+    Raises:
+        SQLAlchemyError: If there's any database error during the query
+
+    Note:
+        - Uses pgvector's cosine_distance (1 - cosine_similarity)
+        - Filter keeps questions with similarity >= threshold
+        - Orders results by most similar first (lowest distance)
+    """
+    try:
+
+        return (
+            db.query(models.Question)
+            .filter(models.Question.embedding.cosine_distance(embedding) <= (1 - similarity_threshold))
+            .order_by(models.Question.embedding.cosine_distance(embedding))
+            .limit(limit)
+            .all()
+        )
+
+    except SQLAlchemyError as e:
+        raise e
+
+
 def get_questions(
     db: Session, skip: int = 0, limit: int = 100, topic_id: Optional[int] = None
 ) -> List[models.Question]:
