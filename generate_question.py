@@ -2,9 +2,12 @@ from pydantic import BaseModel
 import os
 from constants import open_ai_generate_question_prompt
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 import crud
 import random
 from config import client  # Import openAI client from config.py
+import models
+from typing import List
 
 
 class GeneratedQuestion(BaseModel):
@@ -22,18 +25,48 @@ def format_input_prompt(content_of_prompt):
     return open_ai_generate_question_prompt.format(content_of_prompt=content_of_prompt)
 
 
+from sentence_transformers import SentenceTransformer
+
+# Initialize the model (do this at module level)
+sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+
+def get_embedding(text: str) -> list[float]:
+    """Get embedding using Sentence Transformer"""
+    return sentence_model.encode(text).tolist()  # Convert numpy array to list
+
+
+def find_similar_questions(db: Session, prompt: str, prompt_embedding, limit: int = 5):
+    """Find similar questions using vector similarity"""
+    return crud.get_similar_questions(db, prompt_embedding, limit)
+
+
 # This is the entry function to generate a question from a prompt using GPT.
-def generate_question_from_prompt(prompt):
+def generate_question_from_prompt(db: Session, prompt: str):
     """Generate a question using GPT based on user prompt."""
     print("Generating question using GPT")  # logging
+    prompt_embedding = get_embedding(prompt)  # get embedding on raw prompt
     formatted_prompt = format_input_prompt(prompt)
-    generated_question = generate_question_with_gpt(formatted_prompt)
+    generated_question = generate_question_with_gpt(db, formatted_prompt, prompt_embedding)
     return generated_question
 
 
-def generate_question_with_gpt(prompt: str) -> str:
+def generate_question_with_gpt(db: Session, prompt: str, prompt_embedding) -> str:
     """Make API call to OpenAI to generate a question."""
-    messages = [{"role": "system", "content": prompt}]
+
+    # Find similar questions first
+    similar_questions = find_similar_questions(db, prompt, prompt_embedding)
+
+    # Enhance prompt with similar questions as context
+    context = "Here are some similar existing questions for reference:\n"
+    for q in similar_questions:
+        context += f"- {q.description}\n"
+
+    # print(context)
+
+    enhanced_prompt = f"Original prompt: {prompt}\n\nSimilar questions for reference (The generated question should follow the style and formatting of reference questions):\n{context}"
+    # enhanced_prompt = prompt
+    messages = [{"role": "system", "content": enhanced_prompt}]
 
     completion = client.beta.chat.completions.parse(
         model="gpt-4o-2024-08-06",

@@ -10,6 +10,8 @@ from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstra
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, Session
 from typing import List, ForwardRef
 from database import Base
+from pgvector.sqlalchemy import Vector
+
 
 # https://docs.sqlalchemy.org/en/20/orm/cascades.html#passive-deletes
 
@@ -96,6 +98,8 @@ class Question(Base):
     topics: Mapped[List["Topic"]] = relationship(
         secondary=topic_question_association_table, back_populates="questions", cascade="all, delete"
     )
+
+    embedding = Column(Vector(384), nullable=False)  # embedding column for vector similarity search
 
 
 # NOTE: This classes are not in used in the current iteration of the application.
