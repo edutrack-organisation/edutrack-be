@@ -43,7 +43,7 @@ class TopicCreate(BaseModel):
 class QuestionCreate(BaseModel):
     question_number: int
     description: str
-    mark: Optional[int] = 0 # Make it required in the future
+    mark: int
     difficulty: int
     # paper_id: int
     topics_str: List[str] = []  # list of string of topics
@@ -52,7 +52,7 @@ class QuestionUpdate(BaseModel):
     id: int
     question_number: int
     description: str
-    mark: Optional[int] = 0 # Make it required in the future
+    mark: int
     difficulty: int
     # paper_id: int
     topics_str: List[str] = []  # list of string of topics

@@ -59,7 +59,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Endpoints for courses
-@app.get("/courses", response_model=List[schemas.Paper])
+@app.get("/courses", response_model=List[schemas.Course])
 async def get_courses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     courses = crud.get_courses(db, skip=skip, limit=limit)
     return courses
@@ -68,7 +68,6 @@ async def get_courses(skip: int = 0, limit: int = 100, db: Session = Depends(get
 @app.get("/courses/{course_id}", response_model=schemas.Course)
 async def get_course_by_id(course_id: int, db: Session = Depends(get_db)):
     course = crud.get_course_by_id(db, course_id=course_id)
-    print(course)
     if course is None:
         raise HTTPException(status_code=404, detail="Course not found")
     return course
@@ -113,7 +112,6 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
 # Endpoint to update a paper
 @app.put("/papers/{paper_id}", response_model=schemas.Paper)
 async def update_paper(paper_id: int, paper_data: schemas.PaperUpdate, db: Session = Depends(get_db)):
-    print("Received paper_data:", paper_data.dict())
     updated_paper = crud.update_paper(db=db, paper_id=paper_id, paper_data=paper_data)
     return updated_paper
 

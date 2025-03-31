@@ -116,6 +116,8 @@ def update_paper(db: Session, paper_id: int, paper_data: schemas.PaperUpdate):
 
     # Keep a copy of the old questions for deletion logic and student_scores update.
     old_questions = list(current_paper.questions)
+    # Dictionary to cache topics created during this update to avoid duplicates.
+    new_topics = {}
 
     # Process incoming questions. Assume paper_data.questions is the complete list of questions
     updated_question_ids = set()
@@ -126,9 +128,26 @@ def update_paper(db: Session, paper_id: int, paper_data: schemas.PaperUpdate):
             if q_obj:
                 q_obj.description = incoming_q.description
                 q_obj.difficulty = incoming_q.difficulty
-                q_obj.topics = db.query(models.Topic).filter(models.Topic.title.in_(incoming_q.topics_str)).all()
-                q_obj.marks = incoming_q.marks
-                # q_obj.question_number = incoming_q.question_number # Optionally update question_number if that ordering may have changed:
+                q_obj.mark = incoming_q.mark
+                topics_list = []
+                for topic_title in incoming_q.topics_str:
+                    # First, check if we already created or fetched this topic in this request.
+                    if topic_title in new_topics:
+                        topic_obj = new_topics[topic_title]
+                    else:
+                        # Query the database for an existing topic with this title.
+                        topic_obj = db.query(models.Topic).filter(models.Topic.title == topic_title).first()
+                        if not topic_obj:
+                            # Create and add the new topic.
+                            topic_obj = models.Topic(title=topic_title)
+                            db.add(topic_obj)
+                            db.flush()  # Flush to generate the new topic's ID.
+                        # Cache the topic object to avoid duplicate insertions.
+                        new_topics[topic_title] = topic_obj
+                    topics_list.append(topic_obj)
+                q_obj.topics = topics_list
+                # Optionally update question_number if that ordering may have changed:
+                # q_obj.question_number = incoming_q.question_number
                 updated_question_ids.add(q_obj.id)
         # else: # Reserved for future changes
         #     # New question: create and append to the paper
@@ -137,7 +156,7 @@ def update_paper(db: Session, paper_id: int, paper_data: schemas.PaperUpdate):
         #         difficulty=incoming_q.difficulty,
         #         # question_number=incoming_q.question_number,
         #         topics=incoming_q.topics,
-        #         marks=incoming_q.marks,
+        #         mark=incoming_q.mark,
         #         paper_id=paper_data.id,
         #         paper=current_paper,
         #     )
