@@ -36,6 +36,26 @@ class Topic(BaseModel):
     class Config:
         orm_mode = True
 
+class TopicCreate(BaseModel):
+    title: str
+
+# Schemas for Question
+class QuestionCreate(BaseModel):
+    question_number: int
+    description: str
+    mark: int
+    difficulty: int
+    # paper_id: int
+    topics_str: List[str] = []  # list of string of topics
+    
+class QuestionUpdate(BaseModel):
+    id: int
+    question_number: int
+    description: str
+    mark: int
+    difficulty: int
+    # paper_id: int
+    topics_str: List[str] = []  # list of string of topics
 
 class Question(BaseModel):
     id: int
@@ -51,18 +71,52 @@ class Paper(BaseModel):
     id: int
     title: str
     description: Optional[str] = None  # NOTE: Nullable for this iteration
+    course_id: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
     module: Optional[str] = None  # NOTE: Nullable for this iteration
     year: Optional[int] = None  # NOTE: Nullable for this iteration
     overall_difficulty: Optional[float] = None  # NOTE: Nullable for this iteration
     questions: List[Question] = []
     statistics: Optional[Statistic] = None  # NOTE: Nullable for this iteration
     learning_outcomes: List[LearningOutcome]  # NOTE: Nullable for this iteration
+    student_scores: Optional[List[List[int]]] = [] # can be empty, input comes later
 
     class Config:
         orm_mode = True
 
 
 # NOTE: Schemas for Statustic and LearningOutcome are not in used for this first iteration.
+class PaperCreate(BaseModel):
+    title: str
+    description: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
+    course_id: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
+    module: Optional[str] = None #NOTE: should not be none, update frontend to parse this information
+    year: Optional[int] = None #NOTE: should not be none, update frontend to parse this information
+    overall_difficulty: Optional[float] = None #can be none, input comes later
+    questions: List[Question] = []
+    statistics: Optional[Statistic] = None # can be none, input comes later
+    learning_outcomes: List[LearningOutcome] = [] # can be empty, input comes later
+    student_scores: Optional[List[List[int]]] = [] # can be empty, input comes later
+
+class PaperUpdate(BaseModel):
+    id: int
+    title: Optional[str]
+    questions: List[QuestionUpdate]
+
+# Schemas for Course
+class Course(BaseModel):
+    id: int
+    title: str
+    papers: List[Paper] = []
+
+    class Config:
+        orm_mode = True
+
+class CourseCreate(BaseModel):
+    title: str
+    papers: List[Paper] = []
+
+
+# NOTE: These schemas are not used for now, just here to prep for future use
 class Statistic(BaseModel):
     id: int
     normalised_average_marks: float
