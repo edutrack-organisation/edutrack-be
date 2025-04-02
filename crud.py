@@ -9,7 +9,6 @@ from sqlalchemy.exc import SQLAlchemyError
 import models, schemas
 from typing import List, Optional
 from config import client  # Add this import at the top
-
 from sentence_transformers import SentenceTransformer
 
 # Initialize the model at module level
@@ -157,14 +156,8 @@ def get_similar_questions(
         - Orders results by most similar first (lowest distance)
     """
     try:
-
-        return (
-            db.query(models.Question)
-            .filter(models.Question.embedding.cosine_distance(embedding) <= (1 - similarity_threshold))
-            .order_by(models.Question.embedding.cosine_distance(embedding))
-            .limit(limit)
-            .all()
-        )
+        distance = models.Question.embedding.cosine_distance(embedding)
+        return db.query(models.Question).filter(distance <= (1 - similarity_threshold)).limit(limit).all()
 
     except SQLAlchemyError as e:
         raise e

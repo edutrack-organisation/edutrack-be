@@ -17,19 +17,26 @@ import shutil
 from parse import parse_pdf
 from openai_parse import parse_PDF_OpenAI
 from dotenv import load_dotenv
-from topics_data import all_topics
 from generate_question import (
     generate_question_from_prompt,
     select_random_questions_for_topic_with_limit_marks,
 )
 from pydantic import ValidationError
-
+from topics import load_topics
+from shared_state import topics_cache
 
 app = FastAPI(
     title="EduTrack API",
     description="API for managing educational content and assessments",
     version="1.0.0",
 )
+
+
+# cache the topics in excel
+@app.on_event("startup")
+async def startup_event():
+    topics_cache.extend(load_topics())
+
 
 # CORS configuration
 origins = [
@@ -46,6 +53,7 @@ app.add_middleware(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print("Validation error:", exc)
     return JSONResponse(
         status_code=422,
         content={"detail": "Validation error. Please check that your input satisfy the requirement format."},
@@ -84,7 +92,7 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
 
 
 # GET /topics
-# Retrieves a list of all topics
+# Retrieves a list of all topics that is saved in database
 # Parameters:
 #   - skip: int (optional) - Number of records to skip for pagination
 #   - limit: int (optional) - Maximum number of records to return
@@ -96,6 +104,17 @@ def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         return topics
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve topics: {str(e)}")
+
+
+# GET /topics/available
+# Retrieves the complete list of predefined topics from Excel file
+# Returns: List of topic strings
+@app.get("/topics/available", response_model=List[str])
+def get_available_topics():
+    try:
+        return topics_cache
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve available topics list: {str(e)}")
 
 
 # GET /topics/{topic_id}
@@ -149,7 +168,8 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
         # Parse the PDF file using OpenAI GPT4-o
         parsed_json = await parse_PDF_OpenAI(temp_file_path)
         # Combine the parsed_json with all_topics list before sending back to frontend
-        parsed_json["all_topics"] = all_topics
+        parsed_json["all_topics"] = topics_cache
+
         return parsed_json
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error parsing PDF")

@@ -8,6 +8,7 @@ import random
 from config import client  # Import openAI client from config.py
 import models
 from typing import List
+from sentence_transformers import SentenceTransformer
 
 
 class GeneratedQuestion(BaseModel):
@@ -24,8 +25,6 @@ def format_input_prompt(content_of_prompt):
     """
     return open_ai_generate_question_prompt.format(content_of_prompt=content_of_prompt)
 
-
-from sentence_transformers import SentenceTransformer
 
 # Initialize the model (do this at module level)
 sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -62,9 +61,8 @@ def generate_question_with_gpt(db: Session, prompt: str, prompt_embedding) -> st
     for q in similar_questions:
         context += f"- {q.description}\n"
 
-    # print(context)
-
     enhanced_prompt = f"Original prompt: {prompt}\n\nSimilar questions for reference (The generated question should follow the style and formatting of reference questions):\n{context}"
+
     # enhanced_prompt = prompt
     messages = [{"role": "system", "content": enhanced_prompt}]
 

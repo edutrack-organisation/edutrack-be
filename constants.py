@@ -52,7 +52,7 @@ open_ai_generate_question_prompt = """
         5. The bloom taxonomy (whether that particular question is a recall question, application question etc)
 
     Warning:
-    - For the description section, Generate the response with explicit \n newlines so that I can process and render it properly in my application.
+    - For the description section, Generate the response with explicit \n newlines so that I can process and render it properly in my application. (Important!)
     - Do not include the answer.
 
     Context Dump:

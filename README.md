@@ -31,13 +31,16 @@ Please be careful on python dependency management.
 6. Make sure your .env files are populated with the necessary credentials and remember to source them.
 7. Start the server by running `uvicorn main:app --reload`
 
+## Training the Topic Identification Model
+
+8. To train the Topic Identification Model, run the command `python train_model.py` in bash.
+   This is necessary for the application.
+
 ## Docker Container
 
 8. Make sure you have docker desktop installed.
 9. Run the command `docker compose up -d`
 10. To set up the database with the necessary tables, run the migrations by following alembic/README.
-
-
 
 ## PDF Parsing Feature and Topic Identification
 
@@ -49,7 +52,6 @@ Please be careful on python dependency management.
 -   You need to first run `python train_model.py` script in bash to train the model.
 
 <br>
-
 
 Note:
 When you install new packages, please do `pipreqs <location where u want to save>`, if you using the new packages as import. This command will automatically add it to `requirements.txt` as a dependency.

@@ -6,7 +6,7 @@ Refer to alembic/README for more information on how to run migrations after defi
 """
 
 from __future__ import annotations  # this is important to have at the top
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table, event
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, UniqueConstraint, Table, event, Index
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, Session
 from typing import List, ForwardRef
 from database import Base
@@ -100,6 +100,7 @@ class Question(Base):
     )
 
     embedding = Column(Vector(384), nullable=False)  # embedding column for vector similarity search
+    __table_args__ = (Index("questions_embedding_idx", "embedding", postgresql_using="ivfflat"),)
 
 
 # NOTE: This classes are not in used in the current iteration of the application.
