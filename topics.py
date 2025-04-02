@@ -12,10 +12,10 @@ from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score, recall_score, precision_score
 from sklearn.model_selection import train_test_split
-from topics_data import all_topics
 import joblib
 import re
 from sklearn.model_selection import ParameterGrid
+from shared_state import topics_cache
 
 
 """
@@ -44,15 +44,21 @@ def topics_to_vector(topics, all_topics):
     return [1 if topic.strip() in topics else 0 for topic in all_topics]
 
 
+def load_topics(csv_file_path="training_data.xlsx"):
+    df = pd.read_excel(csv_file_path, sheet_name="topics", engine="openpyxl")
+    return df["Topics"].tolist()
+
+
 def load_training_data(csv_file_path):
     df = pd.read_excel(csv_file_path, engine="openpyxl")  # Load the training data from an Excel file
+    all_topics = load_topics(csv_file_path)
 
     def split_topics(topics):
         return topics.split("; ")
 
     df["topics"] = df["topics"].apply(split_topics)  # Split topics by ;
     df = df.to_dict(orient="records")  # Convert DataFrame to a list of dictionaries
-    return df
+    return df, all_topics
 
 
 def preprocess_text(text):
@@ -127,7 +133,7 @@ def tune_hyperparameters(X_train, X_test, y_train, y_test):
 
 ### Function to train the classification model
 def train_classifier():
-    training_data = load_training_data("training_data.xlsx")
+    training_data, all_topics = load_training_data("training_data.xlsx")
 
     # Step 1: Processing Data
     # X_text is the questions for each training data
@@ -176,11 +182,16 @@ def train_classifier():
 
 # Function to predict topics for new questions
 def predict_topics(new_questions):
-    # Load the trained model and threshold
-    multi_label_classifier = joblib.load("multi_label_classifier.pkl")
-    scaler = joblib.load("scaler.pkl")
-    pca = joblib.load("pca.pkl")
-    threshold = joblib.load("threshold.pkl")
+    try:
+        # Load the trained model and threshold
+        multi_label_classifier = joblib.load("multi_label_classifier.pkl")
+        scaler = joblib.load("scaler.pkl")
+        pca = joblib.load("pca.pkl")
+        threshold = joblib.load("threshold.pkl")
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            'Topic Identification Model has not been trained. Please run the command "python train_model.py" first.'
+        )
 
     # Encode new questions using the same SentenceTransformer model
     new_embeddings = model.encode(new_questions)
@@ -201,7 +212,7 @@ def predict_topics(new_questions):
     # Get topic names for each question
     question_predictions = []
     for q in transposed_labels:
-        predicted_topics = [all_topics[i] for i, label in enumerate(q) if label == 1]
+        predicted_topics = [topics_cache[i] for i, label in enumerate(q) if label == 1]
         question_predictions.append(predicted_topics)
 
     return question_predictions
