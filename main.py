@@ -14,7 +14,6 @@ import crud, schemas
 from database import SessionLocal, engine, get_db
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
-from parse import parse_pdf
 from openai_parse import parse_PDF_OpenAI
 from dotenv import load_dotenv
 from generate_question import (
@@ -161,9 +160,6 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
     try:
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-
-        # Parse the PDF file using LlamaParse
-        # parsed_json = parse_pdf(temp_file_path)
 
         # Parse the PDF file using OpenAI GPT4-o
         parsed_json = await parse_PDF_OpenAI(temp_file_path)
