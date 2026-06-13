@@ -8,15 +8,21 @@ import re
 from constants import open_ai_pdf_parsing_prompt
 from topics import predict_topics
 from config import async_client  # Import openAI async client from config.py
+from typing import Optional, Dict
+
+class OptionOverview(BaseModel):
+    interpretation: str
+    likely_misunderstanding: str
 
 
-# Pydantic model representing a parsed exam question.
 class ParsedQuestion(BaseModel):
     description: str
+    type: str
     topics: list[str]
+    level: str
     difficulty: int
     mark: int
-
+    overview: Optional[Dict[str, OptionOverview]] = None
 
 # Pydantic model representing a parsed exam paper.
 class ParsedPaper(BaseModel):
@@ -48,7 +54,8 @@ async def parse_page_with_gpt(base64_images: str) -> str:
         messages=messages,
         max_tokens=16384,
         temperature=0.2,  # lower temperature means more deterministic output
-        response_format=ParsedPaper,  # enforce structured format of response https://platform.openai.com/docs/guides/structured-outputs?example=structured-data
+        # enforce structured format of response https://platform.openai.com/docs/guides/structured-outputs?example=structured-data
+        response_format=ParsedPaper,
     )
 
     return completion.choices[0].message.parsed or ""
@@ -78,18 +85,21 @@ async def parse_PDF_OpenAI(pdf_file_path):
             image.save(
                 buffered, format="JPEG"
             )  # This line saves the PIL image object to the in-memory byte buffer in JPEG format. The buffered object now contains the binary data of the image in JPEG format.
-            img_byte = buffered.getvalue()  # Retrieves the binary data of the JPEG image from the byte buffer.
+            # Retrieves the binary data of the JPEG image from the byte buffer.
+            img_byte = buffered.getvalue()
             img_base64 = base64.b64encode(img_byte).decode(
                 "utf-8"
             )  # Encodes the binary data into a base64-encoded string.
-            images.append(img_base64)  # Appends the base64-encoded string to the images list
+            # Appends the base64-encoded string to the images list
+            images.append(img_base64)
 
         print("Parsing images with OpenAI GPT-4o")  # logging
 
         parsed_paper = await parse_page_with_gpt(images)
         parsed_paper_dict = parsed_paper.dict()
 
-        extracted_questions = []  # extract and combine the questions itself for topics prediction
+        # extract and combine the questions itself for topics prediction
+        extracted_questions = []
         for q in parsed_paper_dict["questions"]:
             extracted_questions.append(q["description"])
 

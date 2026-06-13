@@ -10,6 +10,7 @@ import models, schemas
 from typing import List, Optional
 from config import client  # Add this import at the top
 from sentence_transformers import SentenceTransformer
+from sqlalchemy import update
 
 # Initialize the model at module level
 sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -41,25 +42,46 @@ def get_paper_by_title(db: Session, title: str) -> Optional[models.Paper]:
 
 
 # We want to create paper and its associated questions topics in one transaction
-def create_paper_with_associated_items(db: Session, title: str, questions: List[dict]) -> models.Paper:
+def create_paper_with_associated_items(db: Session, paper_data: schemas.PaperCreate) -> models.Paper:
     """Creates a paper with its associated questions and topics in a single transaction."""
     try:
         # Create a new paper entry
-        db_paper = models.Paper(title=title)
+        db_paper = models.Paper(
+            title=paper_data.title,
+            description=paper_data.description,
+            module_code=paper_data.module_code,
+            module_name=paper_data.module_name,
+            academic_year=paper_data.academic_year,
+            semester=paper_data.semester,
+            overall_difficulty=paper_data.overall_difficulty,
+        )
         db.add(db_paper)
+        db.flush()
 
         # Process each question
-        for i, question in enumerate(questions):
+        for i, question in enumerate(paper_data.questions):
             # Generate embedding using sentence transformer
             embedding = sentence_model.encode(question.description).tolist()
+            overview_data = None
+            if question.overview:
+                overview_data = {
+                    key: (
+                        value.dict() if hasattr(value, "dict") else value
+                    )
+                    for key, value in question.overview.items()
+                }
 
             db_question = models.Question(
-                question_number=i + 1,
+                question_number=question.question_number,
+                type=question.type,
                 description=question.description,
                 mark=question.mark,
                 difficulty=question.difficulty,
                 embedding=embedding,  # this is for similarity search for RAG
+                overview=overview_data,
+                level=question.level
             )
+        
 
             topics_for_question = question.topics
 
@@ -75,6 +97,26 @@ def create_paper_with_associated_items(db: Session, title: str, questions: List[
             db.add(db_question)
             db_paper.questions.append(db_question)
         # one shot commit
+        db.commit()
+        db.refresh(db_paper)
+        return db_paper
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise e
+
+
+def update_paper_metadata(db: Session, paper_id: int, paper_update: schemas.PaperUpdate) -> Optional[models.Paper]:
+    """Updates the metadata fields of a paper."""
+    try:
+        db_paper = get_paper_by_id(db, paper_id)
+        if not db_paper:
+            return None
+
+        # Update only provided fields
+        update_data = paper_update.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_paper, key, value)
+
         db.commit()
         db.refresh(db_paper)
         return db_paper
@@ -190,9 +232,11 @@ def create_question(db: Session, question: schemas.QuestionCreate):
     """Creates a question."""
     db_question = models.Question(
         question_number=question.question_number,
+        type=question.type,
         mark=question.mark,
         difficulty=question.difficulty,
         description=question.description,
+        level=question.level
     )
 
     # Add topics to question
@@ -222,8 +266,12 @@ def update_question_by_id(db: Session, question_id: int, question: schemas.Quest
         db_question = get_question_by_id(db, question_id)
         if db_question:
             db_question.question_number = question.question_number
+            db_question.type = question.type
             db_question.difficulty = question.difficulty
             db_question.description = question.description
+            
+            if question.level is not None:
+                db_question.level = question.level
 
             # Update topics
             db_question.topics = []
@@ -257,4 +305,210 @@ def delete_question_by_id(db: Session, question_id: int) -> Optional[models.Ques
         return db_question
     except SQLAlchemyError as e:
         db.rollback()
+        raise e
+    
+
+def get_grade_distribution_by_paper_id(db: Session, paper_id: int) -> Optional[models.GradeDistribution]:
+    """Retrieves the grade distribution for a specific paper by its ID."""
+    try:
+        return db.query(models.GradeDistribution).filter(models.GradeDistribution.paper_id == paper_id).first()
+    except SQLAlchemyError as e:
+        raise e
+
+
+def create_or_update_grade_distribution(db: Session, paper_id: int, distribution: schemas.GradeDistributionCreate) -> models.GradeDistribution:
+    """Creates a new grade distribution or updates an existing one for a paper."""
+    try:
+        db_distribution = get_grade_distribution_by_paper_id(
+            db, paper_id=paper_id)
+        if db_distribution:
+            # Update existing record
+            db_distribution.bins = distribution.bins
+            db_distribution.counts = distribution.counts
+            db_distribution.total_students = distribution.total_students
+            db_distribution.average_score = distribution.average_score
+            db_distribution.standard_deviation = distribution.standard_deviation
+        else:
+            # Create new record
+            db_distribution = models.GradeDistribution(
+                **distribution.dict(), paper_id=paper_id)
+            db.add(db_distribution)
+        db.commit()
+        db.refresh(db_distribution)
+        return db_distribution
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise e
+    
+# 16 oct
+
+
+def create_dashboard_data(db: Session, paper_id: int, dashboard_data: schemas.DashboardCreate) -> models.Dashboard:
+    """Creates dashboard data for a paper using the payload structure."""
+    db_dashboard = models.Dashboard(
+        paper_id=paper_id,
+        payload=dashboard_data.payload.dict() if dashboard_data.payload else {
+        },  # ✅ ensure JSON
+    )
+    db.add(db_dashboard)
+    db.commit()
+    db.refresh(db_dashboard)
+    return db_dashboard
+
+def get_dashboard_data_by_paper_id(db: Session, paper_id: int) -> Optional[models.Dashboard]:
+    """Retrieves dashboard data for a specific paper."""
+    return db.query(models.Dashboard).filter(models.Dashboard.paper_id == paper_id).first()
+
+# In crud.py
+
+
+def upsert_dashboard_data(db: Session, paper_id: int, data: schemas.DashboardCreate) -> models.Dashboard:
+    """Insert or update dashboard data for a paper safely."""
+    try:
+        existing_dashboard = db.query(
+            models.Dashboard).filter_by(paper_id=paper_id).first()
+
+        if existing_dashboard:
+            # ✅ Update payload safely
+            existing_dashboard.payload = data.payload.dict() if data.payload else {}
+            db.commit()
+            db.refresh(existing_dashboard)
+            return existing_dashboard
+        else:
+            # ✅ Create new record and add it to the session
+            new_dashboard = models.Dashboard(
+                paper_id=paper_id,
+                payload=data.payload.dict() if data.payload else {},
+            )
+            db.add(new_dashboard)  # ✅ Must add before commit
+            db.commit()
+            db.refresh(new_dashboard)
+            return new_dashboard
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"Error upserting dashboard data: {str(e)}")
+
+# 30 oct
+
+def update_question_statistics_bulk(db: Session, updates: List[schemas.QuestionChoiceStatistics]):
+    """
+    Performs a bulk update of student choice statistics for multiple questions.
+    """
+    try:
+        for item in updates:
+            # Prepare the values to update
+            values_to_update = {}
+
+            if item.statistics is not None:
+                values_to_update["student_choice_statistics"] = item.statistics
+
+            if item.grade_statistics is not None:
+                values_to_update["grade_statistics"] = item.grade_statistics
+                
+            if item.quartile_statistics is not None:
+                values_to_update["quartile_statistics"] = item.quartile_statistics
+            
+            if item.individual_choice_statistics is not None:
+                values_to_update["individual_choice_statistics"] = item.individual_choice_statistics
+            
+            if item.answer is not None:
+                values_to_update["answer"] = item.answer
+
+            if values_to_update:
+                db.execute(
+                    update(models.Question)
+                    .where(models.Question.id == item.question_id)
+                    .values(**values_to_update)
+                )
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise e
+    
+
+def upsert_paper_analysis(db: Session, paper_id: int, data: schemas.PaperAnalysisCreate) -> models.PaperAnalysis:
+    """Insert or update AI analysis data for a paper safely."""
+    try:
+        existing_analysis = db.query(models.PaperAnalysis).filter(
+            models.PaperAnalysis.paper_id == paper_id).first()
+
+        if existing_analysis:
+            # Update existing payload
+            existing_analysis.analysis_data = data.analysis_data.dict() if data.analysis_data else {}
+            db.commit()
+            db.refresh(existing_analysis)
+            return existing_analysis
+        else:
+            # Create new record
+            new_analysis = models.PaperAnalysis(
+                paper_id=paper_id,
+                analysis_data=data.analysis_data.dict() if data.analysis_data else {},
+            )
+            db.add(new_analysis)
+            db.commit()
+            db.refresh(new_analysis)
+            return new_analysis
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise e
+
+
+def get_paper_analysis_by_paper_id(db: Session, paper_id: int) -> Optional[models.PaperAnalysis]:
+    """Retrieves the AI analysis for a specific paper by its ID."""
+    try:
+        return db.query(models.PaperAnalysis).filter(models.PaperAnalysis.paper_id == paper_id).first()
+    except SQLAlchemyError as e:
+        raise e
+
+
+def get_paper_comparison(db: Session, baseline_id: int, comparison_id: int) -> Optional[models.PaperComparison]:
+    """Retrieves an existing comparison between two specific papers."""
+    try:
+        return db.query(models.PaperComparison).filter(
+            models.PaperComparison.baseline_paper_id == baseline_id,
+            models.PaperComparison.comparison_paper_id == comparison_id
+        ).first()
+    except SQLAlchemyError as e:
+        raise e
+
+
+def upsert_paper_comparison(
+    db: Session,
+    baseline_id: int,
+    comparison_id: int,
+    data: schemas.PaperComparisonCreate
+) -> models.PaperComparison:
+    """Inserts a new comparison or updates an existing one."""
+    try:
+        existing_comparison = get_paper_comparison(
+            db, baseline_id, comparison_id)
+
+        if existing_comparison:
+            # Update existing record
+            existing_comparison.comparison_data = data.comparison_data.dict(
+            ) if data.comparison_data else {}
+            db.commit()
+            db.refresh(existing_comparison)
+            return existing_comparison
+        else:
+            # Create new record
+            new_comparison = models.PaperComparison(
+                baseline_paper_id=baseline_id,
+                comparison_paper_id=comparison_id,
+                comparison_data=data.comparison_data.dict() if data.comparison_data else {},
+            )
+            db.add(new_comparison)
+            db.commit()
+            db.refresh(new_comparison)
+            return new_comparison
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise e
+
+
+def get_all_paper_comparisons(db: Session) -> List[models.PaperComparison]:
+    """Retrieves all saved paper comparisons."""
+    try:
+        return db.query(models.PaperComparison).all()
+    except SQLAlchemyError as e:
         raise e

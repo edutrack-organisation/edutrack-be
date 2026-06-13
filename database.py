@@ -9,6 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
+load_dotenv()
 
 # Database credentials from environment variables
 # These should be defined in a .env file in the project root
