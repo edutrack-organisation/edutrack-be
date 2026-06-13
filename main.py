@@ -15,14 +15,21 @@ from database import SessionLocal, engine, get_db
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 from openai_parse import parse_PDF_OpenAI
+from gemini_parse import parse_PDF_Gemini
 from dotenv import load_dotenv
 from generate_question import (
     generate_question_from_prompt,
     select_random_questions_for_topic_with_limit_marks,
 )
+from gemini_analysis import generate_gemini_analysis
+from openai_analysis import generate_openai_analysis
 from pydantic import ValidationError
 from topics import load_topics
 from shared_state import topics_cache
+from sqlalchemy import select
+from database import get_db
+from schemas import PaperComparisonPayload
+from gemini_analysis import generate_gemini_paper_comparison
 
 app = FastAPI(
     title="EduTrack API",
@@ -49,6 +56,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mock data for papers, remove it later
+MOCK_AVERAGE_SCORES = {
+    1: {"average_score": 78.5},
+    2: {"average_score": 85.2},
+    3: {"average_score": 65.0},
+    4: {"average_score": 91.0},
+    5: {"average_score": 72.3},
+}
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -73,21 +89,19 @@ def get_papers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve papers: {str(e)}")
 
-
-# GET /papers/{paper_id}
-# Retrieves a specific paper by its ID
-# Parameters:
-#   - paper_id: int - The unique identifier of the paper
-# Returns: Paper object if found, 404 if not found
-@app.get("/papers/{paper_id}", response_model=schemas.Paper)
-def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
+# 9 oct
+# Add this endpoint. It provides the ID and title of every paper.
+@app.get("/papers/summary", response_model=List[schemas.PaperSummary])
+def get_all_paper_summaries(db: Session = Depends(get_db)):
     try:
-        paper = crud.get_paper_by_id(db, paper_id=paper_id)
-        if paper is None:
-            raise HTTPException(status_code=404, detail="Paper not found")
-        return paper
+        papers = crud.get_papers(db)
+        return papers
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve paper: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve paper summaries: {str(e)}")
+
+
+
 
 
 # GET /topics
@@ -109,9 +123,23 @@ def get_topics(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 # Retrieves the complete list of predefined topics from Excel file
 # Returns: List of topic strings
 @app.get("/topics/available", response_model=List[str])
-def get_available_topics():
+def get_available_topics(db: Session = Depends(get_db)):
     try:
-        return topics_cache
+        # 1. Get pre-loaded topics from Excel cache
+        excel_topics = set(topics_cache)
+
+        # 2. Get user-created topics from Database
+        # (Fetching only titles to keep it lightweight)
+        db_topics = crud.get_topics(db, limit=10000)
+        db_topic_titles = set(t.title for t in db_topics)
+
+        # 3. Merge both sets to remove duplicates
+        all_topics = list(excel_topics.union(db_topic_titles))
+
+        # 4. Sort alphabetically for better UX
+        all_topics.sort()
+
+        return all_topics
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve available topics list: {str(e)}")
 
@@ -162,7 +190,9 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
 
         # Parse the PDF file using OpenAI GPT4-o
-        parsed_json = await parse_PDF_OpenAI(temp_file_path)
+        #parsed_json = await parse_PDF_OpenAI(temp_file_path)
+        
+        parsed_json = await parse_PDF_Gemini(temp_file_path)
         # Combine the parsed_json with all_topics list before sending back to frontend
         parsed_json["all_topics"] = topics_cache
 
@@ -181,22 +211,48 @@ async def parse_paper_pdf(file: UploadFile = File(...)):
 #   - parsed_json: dict - Paper data with questions in request body
 # Returns: Created Paper object
 # Errors: 409 if paper title already exists
-@app.post("/papers", status_code=201, response_model=schemas.Paper)
-def create_paper(parsed_json: schemas.PaperCreateRequest, db: Session = Depends(get_db)):
+# edit on 16 oct
+# In main.py
+
+@app.post("/papers", response_model=schemas.Paper)
+def create_paper(paper: schemas.PaperCreate, db: Session = Depends(get_db)):
+    db_paper = crud.get_paper_by_title(db, title=paper.title)
+    if db_paper:
+        raise HTTPException(
+            status_code=409, detail="Paper with this title already exists")
     try:
-        title = parsed_json.title
-        questions = parsed_json.questions
-
-        if not title:
-            raise HTTPException(status_code=400, detail="Paper title is required")
-
-        existing_paper = crud.get_paper_by_title(db, title)
-        if existing_paper:
-            raise HTTPException(status_code=409, detail="Paper with this title already exists")
-        result = crud.create_paper_with_associated_items(db=db, title=title, questions=questions)
-        return result
+        # UPDATE THIS FUNCTION CALL to pass the dashboard data
+        created_paper = crud.create_paper_with_associated_items(
+            db,
+            paper_data=paper
+        )
+        return created_paper
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create paper: {str(e)}")
+        # It's better to log the actual error for debugging
+        print(f"Error creating paper: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/papers/{paper_id}/dashboard", response_model=schemas.Dashboard)
+def get_dashboard_data(paper_id: int, db: Session = Depends(get_db)):
+    dashboard_data = crud.get_dashboard_data_by_paper_id(db, paper_id=paper_id)
+    if not dashboard_data:
+        raise HTTPException(
+            status_code=404, detail="Dashboard data not found for this paper")
+    return dashboard_data
+
+# main.py
+
+
+@app.put("/papers/{paper_id}", response_model=schemas.Paper)
+def update_paper_metadata(paper_id: int, paper_update: schemas.PaperUpdate, db: Session = Depends(get_db)):
+    try:
+        updated_paper = crud.update_paper_metadata(db, paper_id, paper_update)
+        if not updated_paper:
+            raise HTTPException(status_code=404, detail="Paper not found")
+        return updated_paper
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update paper: {str(e)}")
 
 
 # GET /questions
@@ -222,6 +278,84 @@ def get_questions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve questions: {str(e)}")
 
+# for metrics
+
+
+# In main.py
+
+@app.get("/papers/metrics", response_model=List[schemas.Paper])
+def get_paper_metrics(db: Session = Depends(get_db)):
+    """
+    Retrieves all papers, calculates metrics using real average scores from the database,
+    and returns them as Pydantic schema objects.
+    """
+    try:
+        db_papers = crud.get_papers(db)
+        response_papers = []
+
+        for paper in db_papers:
+            questions_with_difficulty = [
+                q for q in paper.questions if q.difficulty is not None]
+            avg_int_difficulty = 1.0
+            if questions_with_difficulty:
+                total_difficulty = sum(
+                    q.difficulty for q in questions_with_difficulty)
+                avg_int_difficulty = total_difficulty / \
+                    len(questions_with_difficulty)
+
+            # UPDATED: Changed from .from_attributes() back to the correct .from_orm()
+            paper_data = schemas.Paper.from_orm(paper)
+            paper_data.overall_difficulty = round(avg_int_difficulty, 2)
+
+            difficulty_factor = 0.75 + ((avg_int_difficulty-1) / 4) * 0.5
+            grade_dist = crud.get_grade_distribution_by_paper_id(
+                db, paper_id=paper.id)
+
+            if grade_dist:
+                avg_score = grade_dist.average_score
+                normalized_score = avg_score * difficulty_factor
+                std = grade_dist.standard_deviation or 0
+                cv = std / avg_score
+                normalized_score = normalized_score / (1 + cv)
+
+                stats_obj = schemas.Statistic(
+                    id=paper.id,
+                    normalised_average_marks=min(
+                        100.0, round(normalized_score, 2)),
+                    normalised_mean_marks=0,
+                    normalised_median_marks=0,
+                    normalised_min_marks=0,
+                    normalised_max_marks=0,
+                )
+                paper_data.statistics = stats_obj
+
+            response_papers.append(paper_data)
+
+        return response_papers
+
+    except Exception as e:
+        print(f"An error occurred in get_paper_metrics: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve paper metrics: {str(e)}")
+        
+# GET /papers/{paper_id}
+# Retrieves a specific paper by its ID
+# Parameters:
+#   - paper_id: int - The unique identifier of the paper
+# Returns: Paper object if found, 404 if not found
+
+
+@app.get("/papers/{paper_id}", response_model=schemas.Paper)
+def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
+    try:
+        paper = crud.get_paper_by_id(db, paper_id=paper_id)
+        print([q.overview for q in paper.questions])
+        if paper is None:
+            raise HTTPException(status_code=404, detail="Paper not found")
+        return paper
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve paper: {str(e)}")
 
 # GET /questions/{question_id}
 # Retrieves a specific question by its ID
@@ -324,3 +458,193 @@ def quick_generate_questions(req: schemas.QuickGenerateQuestionsRequest, db: Ses
         return questions
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to quick generate questions: {str(e)}")
+
+
+@app.post("/papers/{paper_id}/grades", response_model=schemas.GradeDistribution)
+def save_paper_grades(paper_id: int, distribution: schemas.GradeDistributionCreate, db: Session = Depends(get_db)):
+    """Saves or updates the student grade distribution for a specific paper."""
+    db_paper = crud.get_paper_by_id(db, paper_id=paper_id)
+    if db_paper is None:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    try:
+        return crud.create_or_update_grade_distribution(db, paper_id=paper_id, distribution=distribution)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save grade distribution: {str(e)}")
+
+
+@app.get("/papers/{paper_id}/grades", response_model=schemas.GradeDistribution)
+def get_paper_grades(paper_id: int, db: Session = Depends(get_db)):
+    """Retrieves the student grade distribution for a specific paper."""
+    db_distribution = crud.get_grade_distribution_by_paper_id(
+        db, paper_id=paper_id)
+    if db_distribution is None:
+        raise HTTPException(
+            status_code=404, detail="Grade distribution not found for this paper")
+    return db_distribution
+
+# 16 oct
+
+@app.post("/papers/{paper_id}/dashboard", response_model=schemas.Dashboard)
+def save_paper_dashboard(paper_id: int, data: schemas.DashboardCreate, db: Session = Depends(get_db)):
+    """
+    Upserts a JSON payload representing dashboard metrics for a paper.
+    """
+    # Check if the paper exists first
+    paper = crud.get_paper_by_id(db, paper_id=paper_id)
+    if paper is None:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    # The logic is now handled by the CRUD function
+    try:
+        return crud.upsert_dashboard_data(db, paper_id=paper_id, data=data)
+    except Exception as e:
+        print(f"Error upserting dashboard data: {e}")
+        raise HTTPException(
+            status_code=500, detail="Could not save dashboard data.")
+
+
+@app.get("/papers/{paper_id}/dashboard", response_model=schemas.Dashboard)
+def get_paper_dashboard(paper_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieve the saved dashboard payload for a paper.
+    """
+    # The logic is now handled by the CRUD function
+    dashboard_data = crud.get_dashboard_data_by_paper_id(db, paper_id=paper_id)
+    if not dashboard_data:
+        raise HTTPException(
+            status_code=404, detail="Dashboard data not found for this paper")
+    return dashboard_data
+
+# 30 oct
+
+
+@app.post("/questions/statistics", status_code=204)
+def save_student_choice_statistics(data: schemas.StudentChoiceData, db: Session = Depends(get_db)):
+    """
+    Receives and saves the calculated student choice statistics for multiple questions.
+    """
+    try:
+        crud.update_question_statistics_bulk(db, updates=data.questions)
+        return
+    except Exception as e:
+        print(f"Error bulk updating statistics: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to save student choice statistics.")
+        
+# 23 feb
+
+
+@app.post("/papers/{paper_id}/ai-analysis", response_model=schemas.PaperAnalysis)
+async def create_paper_analysis(
+    paper_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Calls Gemini to generate a paper analysis, validates the payload, 
+    and saves it using CRUD operations.
+    """
+    # 1. Use your existing CRUD function to find the paper
+    db_paper = crud.get_paper_by_id(db, paper_id)
+    if not db_paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    # 2. Call the Gemini AI service
+    try:
+        ai_json_dict = await generate_gemini_analysis(db_paper)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502, detail="Failed to generate AI analysis.")
+
+    # 3. Pydantic validation firewall
+    try:
+        # Validate the raw AI dictionary into our structured schema
+        ai_payload = schemas.AIAnalysisPayload(**ai_json_dict)
+        # Wrap it in the Create schema expected by the CRUD function
+        create_schema = schemas.PaperAnalysisCreate(analysis_data=ai_payload)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422, detail="AI returned malformed data.")
+
+    # 4. Use your new CRUD function to save to the database
+    try:
+        saved_analysis = crud.upsert_paper_analysis(
+            db, paper_id, create_schema)
+        return saved_analysis
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail="Database transaction failed")
+        
+
+@app.get("/papers/{paper_id}/ai-analysis", response_model=schemas.PaperAnalysis)
+async def get_paper_analysis(paper_id: int, db: Session = Depends(get_db)):
+    """Fetches existing AI analysis for a paper using CRUD operations."""
+
+    db_analysis = crud.get_paper_analysis_by_paper_id(db, paper_id=paper_id)
+
+    if not db_analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    return db_analysis
+
+
+@app.post("/papers/compare/{baseline_id}/{comparison_id}", response_model=schemas.PaperComparisonDB)
+async def generate_and_save_comparison(
+    baseline_id: int,
+    comparison_id: int,
+    db: Session = Depends(get_db)
+):
+    """Generates a new AI comparison between two papers and saves it to the database."""
+    paper1 = crud.get_paper_by_id(db, baseline_id)
+    paper2 = crud.get_paper_by_id(db, comparison_id)
+
+    if not paper1 or not paper2:
+        raise HTTPException(
+            status_code=404, detail="One or both papers not found.")
+
+    try:
+        # 1. Call Gemini to get the raw dict
+        ai_json_dict = await generate_gemini_paper_comparison(paper1, paper2)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502, detail="Failed to generate AI comparison.")
+
+    try:
+        # 2. Validate with Pydantic firewall
+        ai_payload = schemas.PaperComparisonPayload(**ai_json_dict)
+        create_schema = schemas.PaperComparisonCreate(
+            comparison_data=ai_payload)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422, detail="AI returned malformed data.")
+
+    try:
+        # 3. Save to database using CRUD
+        saved_comparison = crud.upsert_paper_comparison(
+            db, baseline_id, comparison_id, create_schema)
+        return saved_comparison
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail="Database transaction failed")
+
+
+@app.get("/papers/compare/{baseline_id}/{comparison_id}", response_model=schemas.PaperComparisonDB)
+def get_paper_comparison(baseline_id: int, comparison_id: int, db: Session = Depends(get_db)):
+    """Fetches an existing comparison from the database."""
+    db_comparison = crud.get_paper_comparison(db, baseline_id, comparison_id)
+
+    if not db_comparison:
+        raise HTTPException(
+            status_code=404, detail="Comparison not found. Please generate it first.")
+
+    return db_comparison
+
+
+@app.get("/papers/comparisons/all", response_model=List[schemas.PaperComparisonDB])
+def get_all_comparisons(db: Session = Depends(get_db)):
+    """Fetches all saved AI comparisons."""
+    try:
+        return crud.get_all_paper_comparisons(db)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch comparisons.")
