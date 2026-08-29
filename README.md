@@ -24,7 +24,7 @@ Please be careful on python dependency management. See [Python Dependency Manage
 
 5. Install the dependencies:
     ```sh
-    pip install -r requirements.txt -v
+    pip install -r requirements-dev.txt -v
     ```
 
 _Info: **pipreqs**: Python tool that generates requirements.txt files by scanning your project for imports. It's more intelligent than pip freeze because it only includes direct dependencies that are actually used in your code. This helps avoid including unnecessary nested dependencies_
@@ -54,6 +54,87 @@ NOTE:
 
 6. Make sure your .env files are populated with the necessary credentials and remember to source them.
 7. Start the server by running `uvicorn main:app --reload`
+
+## Local PDF question extraction
+
+The `POST /papers/parse` endpoint uses two local components:
+
+1. **Docling** converts a PDF into layout-aware Markdown and applies OCR where needed.
+2. **Ollama with Qwen 2.5 7B Instruct** converts that Markdown into schema-validated
+   MCQ/MRQ question data.
+
+No exam content is sent to OpenAI by this endpoint.
+
+### macOS setup
+
+1. Install and start the [Ollama macOS application](https://docs.ollama.com/macos).
+2. Download the configured model:
+
+    ```sh
+    ollama pull qwen2.5:7b-instruct
+    ```
+
+3. Copy the local parsing settings from `.env.example` into your `.env`. On an
+   Apple Silicon Mac, `DOCLING_DEVICE=mps` enables Metal acceleration.
+4. Optionally download Docling models before the first request:
+
+    ```sh
+    docling-tools models download
+    ```
+
+   Otherwise, Docling downloads its required models on the first parse.
+
+5. Confirm that Ollama is available:
+
+    ```sh
+    curl http://localhost:11434/api/tags
+    ```
+
+### Parse a paper
+
+```sh
+curl -X POST http://localhost:8000/papers/parse \
+  -F "file=@/absolute/path/to/paper.pdf"
+```
+
+The response retains the fields expected by the existing frontend
+(`description`, `topics`, `difficulty`, and `mark`) and adds structured fields:
+
+```json
+{
+  "title": "CS2105 Final Examination",
+  "questions": [
+    {
+      "question_number": "1",
+      "question_type": "MCQ",
+      "description": "Question stem\nA. First option\nB. Second option",
+      "options": [
+        {"label": "A", "text": "First option"},
+        {"label": "B", "text": "Second option"}
+      ],
+      "correct_answers": [],
+      "mark": 1,
+      "difficulty": 0,
+      "topics": []
+    }
+  ],
+  "all_topics": []
+}
+```
+
+`correct_answers` remains empty unless the uploaded document includes an answer
+key. Missing marks and unassessed difficulty are returned as `0` for lecturer
+review; the model is explicitly instructed not to solve questions or infer
+topics. Diagram-dependent questions still require manual review because the
+configured Qwen model is text-only.
+
+### Tests
+
+Tests use fake Docling and Ollama clients, so they run without model downloads:
+
+```sh
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m pytest -q
+```
 
 ## Python Dependency Management
 
