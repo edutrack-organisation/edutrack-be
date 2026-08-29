@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from parsing.config import PdfParsingSettings
@@ -20,6 +21,9 @@ class DoclingPdfExtractor:
     ) -> None:
         self._settings = settings
         self._converter = converter
+        # A single local conversion at a time avoids duplicate initialization
+        # and excessive memory pressure under concurrent upload requests.
+        self._conversion_lock = Lock()
 
     def _get_converter(self) -> Any:
         if self._converter is None:
@@ -49,12 +53,13 @@ class DoclingPdfExtractor:
     def extract(self, pdf_path: Path) -> ExtractedDocument:
         """Convert a PDF to page-delimited Markdown for downstream extraction."""
         try:
-            result = self._get_converter().convert(
-                pdf_path,
-                raises_on_error=True,
-                max_num_pages=self._settings.max_pdf_pages,
-                max_file_size=self._settings.max_upload_bytes,
-            )
+            with self._conversion_lock:
+                result = self._get_converter().convert(
+                    pdf_path,
+                    raises_on_error=True,
+                    max_num_pages=self._settings.max_pdf_pages,
+                    max_file_size=self._settings.max_upload_bytes,
+                )
             markdown = result.document.export_to_markdown(
                 page_break_placeholder="\n\n<!-- PAGE BREAK -->\n\n",
             ).strip()
@@ -68,4 +73,3 @@ class DoclingPdfExtractor:
             raise PdfConversionError("Docling reported that the PDF has no pages")
 
         return ExtractedDocument(markdown=markdown, page_count=page_count)
-

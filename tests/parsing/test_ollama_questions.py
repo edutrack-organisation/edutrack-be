@@ -119,6 +119,29 @@ async def test_extract_rejects_invalid_model_output():
 
 
 @pytest.mark.asyncio
+async def test_extract_rejects_whitespace_only_question_text():
+    content = json.dumps(
+        {
+            "title": "Exam",
+            "questions": [
+                {
+                    "question_number": "1",
+                    "question_type": "MCQ",
+                    "description": "   ",
+                    "options": [],
+                    "correct_answers": [],
+                    "mark": 1,
+                }
+            ],
+        }
+    )
+    extractor = OllamaQuestionExtractor(make_settings(), client=FakeClient(content))
+
+    with pytest.raises(QuestionExtractionError, match="invalid question data"):
+        await extractor.extract("question text", "paper.pdf")
+
+
+@pytest.mark.asyncio
 async def test_extract_explains_missing_model():
     class MissingModelClient:
         async def chat(self, **kwargs):
@@ -141,4 +164,3 @@ async def test_extract_explains_unavailable_ollama():
 
     with pytest.raises(OllamaUnavailableError, match="localhost:11434"):
         await extractor.extract("question text", "paper.pdf")
-

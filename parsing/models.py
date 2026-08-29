@@ -17,7 +17,7 @@ class QuestionOption(BaseModel):
     label: str = Field(min_length=1)
     text: str = Field(min_length=1)
 
-    @field_validator("label", "text")
+    @field_validator("label", "text", mode="before")
     @classmethod
     def strip_text(cls, value: str) -> str:
         return value.strip()
@@ -42,4 +42,3 @@ class ParsedPaper(BaseModel):
 class ExtractedDocument(BaseModel):
     markdown: str = Field(min_length=1)
     page_count: int = Field(ge=1)
-

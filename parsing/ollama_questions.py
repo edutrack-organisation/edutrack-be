@@ -45,10 +45,13 @@ class _ModelQuestion(BaseModel):
     correct_answers: list[str] = Field(default_factory=list)
     mark: int | None = Field(default=None, ge=0)
 
-    @field_validator("question_number", "description")
+    @field_validator("question_number", "description", mode="before")
     @classmethod
     def strip_optional_text(cls, value: str | None) -> str | None:
-        return value.strip() if value is not None else None
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
     @field_validator("correct_answers")
     @classmethod
@@ -72,10 +75,12 @@ class _ModelPaper(BaseModel):
     title: str | None = None
     questions: list[_ModelQuestion] = Field(min_length=1)
 
-    @field_validator("title")
+    @field_validator("title", mode="before")
     @classmethod
     def strip_title(cls, value: str | None) -> str | None:
-        return value.strip() if value is not None else None
+        if value is None:
+            return None
+        return value.strip() or None
 
 
 class OllamaQuestionExtractor:
@@ -170,4 +175,3 @@ class OllamaQuestionExtractor:
     def _fallback_title(filename: str) -> str:
         title = filename.rsplit(".", maxsplit=1)[0].replace("_", " ").strip()
         return title or "Untitled exam paper"
-
