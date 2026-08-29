@@ -20,6 +20,7 @@ Note that validation are handled at the schema ONLY for request's schema to avoi
 from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from parsing.models import ParsedQuestion
 
 
 """BASE MODELS
@@ -164,7 +165,7 @@ class PaperCreateRequest(BaseModel):
 # this is the format of the parsed paper from GPT API
 class PaperParseResponse(BaseModel):
     title: str
-    questions: List[dict]
+    questions: List[ParsedQuestion]
     all_topics: List[str]
 
 

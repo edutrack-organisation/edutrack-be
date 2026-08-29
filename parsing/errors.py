@@ -9,6 +9,10 @@ class InvalidPdfError(PdfParsingError):
     """The upload is not a supported PDF."""
 
 
+class PdfTooLargeError(InvalidPdfError):
+    """The uploaded PDF exceeds the configured size limit."""
+
+
 class PdfConversionError(PdfParsingError):
     """Docling could not convert the PDF into usable text."""
 
@@ -27,4 +31,3 @@ class OllamaUnavailableError(PdfParsingError):
 
 class OllamaModelNotFoundError(PdfParsingError):
     """The configured model has not been installed in Ollama."""
-

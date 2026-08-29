@@ -5,7 +5,10 @@ This file serves as the core of the EduTrack API, containing the endpoints and c
 """
 
 from typing import List, Optional
-import os
+from functools import lru_cache
+import logging
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from fastapi import Depends, FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -13,9 +16,6 @@ from sqlalchemy.orm import Session
 import crud, schemas
 from database import SessionLocal, engine, get_db
 from fastapi.middleware.cors import CORSMiddleware
-import shutil
-from openai_parse import parse_PDF_OpenAI
-from dotenv import load_dotenv
 from generate_question import (
     generate_question_from_prompt,
     select_random_questions_for_topic_with_limit_marks,
@@ -23,12 +23,39 @@ from generate_question import (
 from pydantic import ValidationError
 from topics import load_topics
 from shared_state import topics_cache
+from parsing.config import PdfParsingSettings
+from parsing.docling_pdf import DoclingPdfExtractor
+from parsing.errors import (
+    DocumentTooLongError,
+    InvalidPdfError,
+    OllamaModelNotFoundError,
+    OllamaUnavailableError,
+    PdfConversionError,
+    PdfTooLargeError,
+    QuestionExtractionError,
+)
+from parsing.ollama_questions import OllamaQuestionExtractor
+from parsing.service import PdfQuestionParsingService
+from parsing.upload import save_validated_pdf
+
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="EduTrack API",
     description="API for managing educational content and assessments",
     version="1.0.0",
 )
+
+
+@lru_cache
+def get_pdf_parsing_service() -> PdfQuestionParsingService:
+    """Build the local parser once; Docling itself remains lazily initialized."""
+    settings = PdfParsingSettings.from_env()
+    return PdfQuestionParsingService(
+        pdf_extractor=DoclingPdfExtractor(settings),
+        question_extractor=OllamaQuestionExtractor(settings),
+    )
 
 
 # cache the topics in excel
@@ -155,24 +182,38 @@ def create_topic(topic: schemas.TopicCreate, db: Session = Depends(get_db)):
 #   - file: UploadFile - PDF file to parse
 # Returns: Parsed paper data with questions and available topics
 @app.post("/papers/parse", response_model=schemas.PaperParseResponse)
-async def parse_paper_pdf(file: UploadFile = File(...)):
-    temp_file_path = f"temp_{file.filename}"  # Temporary file path for saving the uploaded file
+async def parse_paper_pdf(
+    file: UploadFile = File(...),
+    parser: PdfQuestionParsingService = Depends(get_pdf_parsing_service),
+):
+    filename = file.filename or "uploaded.pdf"
     try:
-        with open(temp_file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        with TemporaryDirectory(prefix="edutrack-pdf-") as temp_directory:
+            pdf_path = Path(temp_directory) / "paper.pdf"
+            settings = PdfParsingSettings.from_env()
+            await save_validated_pdf(file, pdf_path, settings.max_upload_bytes)
+            parsed_paper = await parser.parse(pdf_path, original_filename=filename)
 
-        # Parse the PDF file using OpenAI GPT4-o
-        parsed_json = await parse_PDF_OpenAI(temp_file_path)
-        # Combine the parsed_json with all_topics list before sending back to frontend
-        parsed_json["all_topics"] = topics_cache
-
-        return parsed_json
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Error parsing PDF")
+        return schemas.PaperParseResponse(
+            title=parsed_paper.title,
+            questions=parsed_paper.questions,
+            all_topics=list(topics_cache),
+        )
+    except PdfTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except InvalidPdfError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (PdfConversionError, DocumentTooLongError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (OllamaUnavailableError, OllamaModelNotFoundError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except QuestionExtractionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Unexpected failure while parsing PDF '%s'", filename)
+        raise HTTPException(status_code=500, detail="Unexpected error while parsing PDF") from exc
     finally:
-        # Clean up the temporary file
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+        await file.close()
 
 
 # POST /papers
