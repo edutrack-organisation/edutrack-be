@@ -87,17 +87,50 @@ No exam content is sent to OpenAI by this endpoint.
 5. Confirm that Ollama is available:
 
     ```sh
-    curl http://localhost:11434/api/tags
+    ollama list
     ```
 
-### Parse a paper
+   The output should include `qwen2.5:7b-instruct`.
 
-```sh
-curl -X POST http://localhost:8000/papers/parse \
-  -F "file=@/absolute/path/to/paper.pdf"
+### Parse a paper from the frontend
+
+The normal application workflow does not require `curl`. Keep Ollama and this
+backend running, then start the EduTrack frontend. The browser uploads the PDF
+to this backend's `POST /papers/parse` endpoint, which runs Docling and Qwen
+locally.
+
+1. Start Ollama and confirm that the configured Qwen model is installed.
+2. Start this backend:
+
+    ```sh
+    uvicorn main:app --reload
+    ```
+
+3. In the frontend repository, configure the backend address if it is not the
+   default `http://127.0.0.1:8000`:
+
+    ```env
+    VITE_API_BASE_URL=http://127.0.0.1:8000
+    ```
+
+4. Start the frontend:
+
+    ```sh
+    pnpm run dev
+    ```
+
+5. Open the frontend's `/uploadpdf` page, select a PDF, and keep the page open
+   while the local models process it.
+6. Review the extracted questions, types, options, topics, marks, difficulty,
+   and answer-key indicators in the frontend before saving the paper.
+
+The request path is:
+
+```text
+Frontend upload page -> POST /papers/parse -> Docling -> Ollama/Qwen -> Frontend review page
 ```
 
-The response retains the fields expected by the existing frontend
+The endpoint response retains the fields expected by the frontend
 (`description`, `topics`, `difficulty`, and `mark`) and adds structured fields:
 
 ```json
