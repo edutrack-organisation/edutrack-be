@@ -8,7 +8,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestCentroid
-from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score, recall_score, precision_score
 from sklearn.model_selection import train_test_split
@@ -16,6 +15,7 @@ import joblib
 import re
 from sklearn.model_selection import ParameterGrid
 from shared_state import topics_cache
+from embeddings import get_topic_embedding_model
 
 
 """
@@ -65,10 +65,6 @@ def preprocess_text(text):
     # Replace newline characters with spaces
     text = text.replace("\n", "")
     return text
-
-
-### Global Variables
-model = SentenceTransformer("all-mpnet-base-v2")
 
 
 def tune_hyperparameters(X_train, X_test, y_train, y_test):
@@ -142,7 +138,7 @@ def train_classifier():
     Y = np.array([topics_to_vector(item["topics"], all_topics) for item in training_data])
 
     # Step 2: Encode questions using SentenceTransformer
-    X_embedding = model.encode(X_text)
+    X_embedding = get_topic_embedding_model().encode(X_text)
 
     # Step 3: Split the data into training and test sets
     X_train, X_test, y_train, y_test = train_test_split(X_embedding, Y, test_size=0.2, random_state=41)
@@ -194,7 +190,7 @@ def predict_topics(new_questions):
         )
 
     # Encode new questions using the same SentenceTransformer model
-    new_embeddings = model.encode(new_questions)
+    new_embeddings = get_topic_embedding_model().encode(new_questions)
 
     # Scale the encoded embeddings using the already fitted scaler
     scaled_embedding = scaler.transform(new_embeddings)

@@ -9,10 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import models, schemas
 from typing import List, Optional
 from config import client  # Add this import at the top
-from sentence_transformers import SentenceTransformer
-
-# Initialize the model at module level
-sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+from embeddings import encode_question
 
 
 # Paper operations
@@ -51,7 +48,7 @@ def create_paper_with_associated_items(db: Session, title: str, questions: List[
         # Process each question
         for i, question in enumerate(questions):
             # Generate embedding using sentence transformer
-            embedding = sentence_model.encode(question.description).tolist()
+            embedding = encode_question(question.description)
 
             db_question = models.Question(
                 question_number=i + 1,

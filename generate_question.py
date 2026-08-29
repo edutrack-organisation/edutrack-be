@@ -8,7 +8,7 @@ import random
 from config import client  # Import openAI client from config.py
 import models
 from typing import List
-from sentence_transformers import SentenceTransformer
+from embeddings import encode_question
 
 
 class GeneratedQuestion(BaseModel):
@@ -26,13 +26,9 @@ def format_input_prompt(content_of_prompt):
     return open_ai_generate_question_prompt.format(content_of_prompt=content_of_prompt)
 
 
-# Initialize the model (do this at module level)
-sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-
 def get_embedding(text: str) -> list[float]:
     """Get embedding using Sentence Transformer"""
-    return sentence_model.encode(text).tolist()  # Convert numpy array to list
+    return encode_question(text)
 
 
 def find_similar_questions(db: Session, prompt: str, prompt_embedding, limit: int = 5):
