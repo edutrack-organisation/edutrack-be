@@ -34,4 +34,3 @@ class PdfQuestionParsingService:
             document.markdown,
             fallback_title=original_filename,
         )
-

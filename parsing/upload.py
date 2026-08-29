@@ -47,4 +47,3 @@ async def save_validated_pdf(
             output.write(chunk)
 
     return total_bytes
-

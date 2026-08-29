@@ -19,4 +19,3 @@ def get_topic_embedding_model() -> SentenceTransformer:
 
 def encode_question(text: str) -> list[float]:
     return get_question_embedding_model().encode(text).tolist()
-

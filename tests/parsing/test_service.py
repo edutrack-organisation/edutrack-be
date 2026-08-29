@@ -32,4 +32,3 @@ async def test_service_passes_docling_text_to_question_extractor():
     paper = await service.parse(Path("/tmp/paper.pdf"), "original_name.pdf")
 
     assert paper.title == "Exam"
-

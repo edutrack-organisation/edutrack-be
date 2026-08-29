@@ -49,4 +49,3 @@ def test_topic_model_is_loaded_only_when_requested(monkeypatch):
     assert created_models == ["all-mpnet-base-v2"]
 
     embeddings.get_topic_embedding_model.cache_clear()
-

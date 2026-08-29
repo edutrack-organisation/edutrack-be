@@ -71,4 +71,3 @@ async def test_parse_endpoint_reports_offline_ollama():
 
     assert raised.value.status_code == 503
     assert raised.value.detail == "Cannot connect to local Ollama"
-

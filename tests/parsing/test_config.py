@@ -31,4 +31,3 @@ def test_settings_reject_invalid_limits(monkeypatch):
         assert str(exc) == "PDF_MAX_PAGES must be greater than zero"
     else:
         raise AssertionError("Expected invalid page limit to be rejected")
-

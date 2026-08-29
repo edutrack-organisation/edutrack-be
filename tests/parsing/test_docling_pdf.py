@@ -55,4 +55,3 @@ def test_extract_wraps_docling_errors():
 
     with pytest.raises(PdfConversionError, match="bad PDF"):
         extractor.extract(Path("paper.pdf"))
-

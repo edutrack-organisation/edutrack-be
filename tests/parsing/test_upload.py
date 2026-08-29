@@ -64,4 +64,3 @@ async def test_save_validated_pdf_rejects_wrong_content_type(tmp_path: Path):
             tmp_path / "paper.pdf",
             max_bytes=1024,
         )
-

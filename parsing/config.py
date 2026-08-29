@@ -54,4 +54,3 @@ class PdfParsingSettings:
             max_pdf_pages=_positive_int("PDF_MAX_PAGES", 100),
             max_upload_bytes=max_upload_mb * 1024 * 1024,
         )
-
